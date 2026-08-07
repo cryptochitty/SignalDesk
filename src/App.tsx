@@ -37,6 +37,7 @@ export default function App() {
     maWindow: 3,
     forecastHorizon: 1,
     confidenceLevel: 90,
+    backtestHorizonMonths: 6,
     weights: {
       ma: 0.35,
       regression: 0.35,

@@ -24,6 +24,7 @@ export interface QuantitativeConfig {
   maWindow: number;          // e.g. 3, 5, 10, 20 days
   forecastHorizon: number;   // e.g. 1 to 14 days
   confidenceLevel: number;   // e.g. 80, 90, 95 (%)
+  backtestHorizonMonths?: number; // e.g. 1, 3, 6, 12 months (default: 6)
   weights: ModelWeights;
 }
 

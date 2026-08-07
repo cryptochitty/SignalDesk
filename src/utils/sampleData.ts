@@ -1,5 +1,54 @@
 import { StockPreset } from "../types";
 
+/**
+ * Generates a clean 6-month daily trading series (Feb 2, 2026 to Aug 5, 2026)
+ * with deterministic, realistic price walk for walk-forward backtesting.
+ */
+function generate6MonthSeries(startPrice: number, endPrice: number, seed: number): string {
+  const dates: string[] = [];
+  const start = new Date(Date.UTC(2026, 1, 2)); // Feb 2, 2026
+  const end = new Date(Date.UTC(2026, 7, 5));   // Aug 5, 2026
+
+  let curr = new Date(start);
+  while (curr <= end) {
+    const day = curr.getUTCDay();
+    if (day !== 0 && day !== 6) {
+      const y = curr.getUTCFullYear();
+      const m = String(curr.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(curr.getUTCDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${d}`);
+    }
+    curr.setUTCDate(curr.getUTCDate() + 1);
+  }
+
+  const n = dates.length;
+  const rows: string[] = ["Date,Close"];
+
+  let rng = seed;
+  const pseudoRandom = () => {
+    rng = (rng * 9301 + 49297) % 233280;
+    return rng / 233280;
+  };
+
+  const step = (endPrice - startPrice) / (n - 1);
+
+  for (let i = 0; i < n; i++) {
+    let price: number;
+    if (i === 0) {
+      price = startPrice;
+    } else if (i === n - 1) {
+      price = endPrice;
+    } else {
+      const noise = (pseudoRandom() - 0.48) * (startPrice * 0.015);
+      const trendPrice = startPrice + step * i;
+      price = trendPrice + noise;
+    }
+    rows.push(`${dates[i]},${price.toFixed(2)}`);
+  }
+
+  return rows.join("\n");
+}
+
 export const STOCK_PRESETS: StockPreset[] = [
   {
     id: "urbanco-nse",
@@ -8,33 +57,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Urban Company (URBANCO)",
     currency: "₹",
     category: "NSE India",
-    csvData: `Date,Close
-2026-07-01,162.50
-2026-07-02,165.80
-2026-07-03,161.20
-2026-07-06,158.40
-2026-07-07,159.90
-2026-07-08,154.30
-2026-07-09,152.10
-2026-07-10,148.80
-2026-07-13,150.20
-2026-07-14,146.50
-2026-07-15,145.00
-2026-07-16,149.20
-2026-07-17,143.80
-2026-07-20,140.10
-2026-07-21,138.50
-2026-07-22,141.00
-2026-07-23,135.60
-2026-07-24,133.20
-2026-07-27,137.80
-2026-07-28,139.40
-2026-07-29,141.10
-2026-07-30,145.80
-2026-07-31,143.20
-2026-08-03,140.90
-2026-08-04,144.10
-2026-08-05,142.24`,
+    csvData: generate6MonthSeries(182.50, 142.24, 101),
   },
   {
     id: "reliance-nse",
@@ -43,33 +66,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Reliance Industries Limited (NSE)",
     currency: "₹",
     category: "NSE India",
-    csvData: `Date,Close
-2026-07-01,1380.50
-2026-07-02,1388.20
-2026-07-03,1395.10
-2026-07-06,1402.75
-2026-07-07,1398.60
-2026-07-08,1410.30
-2026-07-09,1418.90
-2026-07-10,1425.40
-2026-07-13,1419.80
-2026-07-14,1432.10
-2026-07-15,1440.50
-2026-07-16,1435.20
-2026-07-17,1448.00
-2026-07-20,1455.60
-2026-07-21,1462.30
-2026-07-22,1450.10
-2026-07-23,1468.40
-2026-07-24,1475.90
-2026-07-27,1482.50
-2026-07-28,1478.20
-2026-07-29,1490.60
-2026-07-30,1498.40
-2026-07-31,1505.10
-2026-08-03,1518.30
-2026-08-04,1512.60
-2026-08-05,1525.80`,
+    csvData: generate6MonthSeries(1280.00, 1525.80, 202),
   },
   {
     id: "tcs-nse",
@@ -78,33 +75,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Tata Consultancy Services Ltd (NSE)",
     currency: "₹",
     category: "NSE India",
-    csvData: `Date,Close
-2026-07-01,4120.00
-2026-07-02,4135.50
-2026-07-03,4150.25
-2026-07-06,4142.10
-2026-07-07,4168.00
-2026-07-08,4185.30
-2026-07-09,4202.10
-2026-07-10,4190.50
-2026-07-13,4215.80
-2026-07-14,4230.00
-2026-07-15,4245.60
-2026-07-16,4238.10
-2026-07-17,4260.90
-2026-07-20,4278.40
-2026-07-21,4290.00
-2026-07-22,4270.50
-2026-07-23,4312.00
-2026-07-24,4335.20
-2026-07-27,4350.10
-2026-07-28,4328.80
-2026-07-29,4365.40
-2026-07-30,4382.00
-2026-07-31,4410.50
-2026-08-03,4395.20
-2026-08-04,4425.00
-2026-08-05,4448.60`,
+    csvData: generate6MonthSeries(3850.00, 4448.60, 303),
   },
   {
     id: "nifty50-nse",
@@ -113,33 +84,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Nifty 50 Index (National Stock Exchange of India)",
     currency: "₹",
     category: "Indices",
-    csvData: `Date,Close
-2026-07-01,24150.20
-2026-07-02,24210.50
-2026-07-03,24280.90
-2026-07-06,24240.00
-2026-07-07,24350.60
-2026-07-08,24420.10
-2026-07-09,24490.80
-2026-07-10,24460.30
-2026-07-13,24550.00
-2026-07-14,24620.40
-2026-07-15,24690.10
-2026-07-16,24630.80
-2026-07-17,24750.20
-2026-07-20,24820.60
-2026-07-21,24890.00
-2026-07-22,24810.50
-2026-07-23,24960.30
-2026-07-24,25040.80
-2026-07-27,25120.00
-2026-07-28,25080.40
-2026-07-29,25210.60
-2026-07-30,25290.10
-2026-07-31,25360.50
-2026-08-03,25450.00
-2026-08-04,25410.20
-2026-08-05,25520.80`,
+    csvData: generate6MonthSeries(22100.00, 25520.80, 404),
   },
   {
     id: "tech-sample",
@@ -148,13 +93,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "NVIDIA Corp (NASDAQ)",
     currency: "$",
     category: "US Tech",
-    csvData: `2026-07-19,130.70
-2026-07-24,129.76
-2026-07-27,130.42
-2026-07-28,131.24
-2026-08-03,146.19
-2026-08-04,144.81
-2026-08-05,142.55`,
+    csvData: generate6MonthSeries(112.50, 142.55, 505),
   },
   {
     id: "aapl-tech",
@@ -163,33 +102,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Apple Inc. (NASDAQ)",
     currency: "$",
     category: "US Tech",
-    csvData: `Date,Close
-2026-07-01,222.40
-2026-07-02,224.10
-2026-07-03,225.80
-2026-07-06,223.90
-2026-07-07,226.50
-2026-07-08,228.20
-2026-07-09,229.70
-2026-07-10,228.40
-2026-07-13,231.00
-2026-07-14,232.80
-2026-07-15,234.20
-2026-07-16,233.10
-2026-07-17,235.60
-2026-07-20,237.10
-2026-07-21,238.50
-2026-07-22,236.80
-2026-07-23,240.20
-2026-07-24,242.10
-2026-07-27,243.80
-2026-07-28,241.90
-2026-07-29,245.00
-2026-07-30,246.70
-2026-07-31,248.30
-2026-08-03,247.10
-2026-08-04,249.50
-2026-08-05,251.20`,
+    csvData: generate6MonthSeries(182.00, 251.20, 606),
   },
   {
     id: "hl-btc",
@@ -198,29 +111,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Bitcoin Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: `Date,Close
-2026-07-15,62100.00
-2026-07-16,62850.50
-2026-07-17,63400.00
-2026-07-18,63100.20
-2026-07-19,63890.00
-2026-07-20,64250.00
-2026-07-21,63900.50
-2026-07-22,64800.00
-2026-07-23,65210.00
-2026-07-24,64950.00
-2026-07-25,65800.00
-2026-07-26,66120.00
-2026-07-27,65400.00
-2026-07-28,66890.00
-2026-07-29,67200.00
-2026-07-30,66900.00
-2026-07-31,67850.00
-2026-08-01,68200.00
-2026-08-02,67900.00
-2026-08-03,68950.00
-2026-08-04,69400.00
-2026-08-05,68820.50`,
+    csvData: generate6MonthSeries(51800.00, 68820.50, 707),
   },
   {
     id: "hl-eth",
@@ -229,29 +120,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Ethereum Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: `Date,Close
-2026-07-15,3120.00
-2026-07-16,3180.50
-2026-07-17,3210.00
-2026-07-18,3190.20
-2026-07-19,3250.00
-2026-07-20,3280.00
-2026-07-21,3240.50
-2026-07-22,3310.00
-2026-07-23,3380.00
-2026-07-24,3350.00
-2026-07-25,3420.00
-2026-07-26,3460.00
-2026-07-27,3410.00
-2026-07-28,3490.00
-2026-07-29,3520.00
-2026-07-30,3480.00
-2026-07-31,3560.00
-2026-08-01,3610.00
-2026-08-02,3580.00
-2026-08-03,3650.00
-2026-08-04,3690.00
-2026-08-05,3640.20`,
+    csvData: generate6MonthSeries(2450.00, 3640.20, 808),
   },
   {
     id: "hl-sol",
@@ -260,28 +129,6 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Solana Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: `Date,Close
-2026-07-15,135.00
-2026-07-16,138.20
-2026-07-17,141.50
-2026-07-18,139.80
-2026-07-19,143.00
-2026-07-20,146.50
-2026-07-21,144.10
-2026-07-22,148.20
-2026-07-23,152.00
-2026-07-24,150.50
-2026-07-25,155.00
-2026-07-26,158.40
-2026-07-27,156.00
-2026-07-28,162.10
-2026-07-29,165.00
-2026-07-30,161.80
-2026-07-31,168.50
-2026-08-01,172.00
-2026-08-02,169.50
-2026-08-03,175.20
-2026-08-04,178.00
-2026-08-05,174.50`,
+    csvData: generate6MonthSeries(102.00, 174.50, 909),
   },
 ];

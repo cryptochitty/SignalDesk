@@ -186,6 +186,33 @@ export function getZScore(confidenceLevel: number): number {
 }
 
 /**
+ * Filters data rows based on selected backtest horizon (in months or trading days)
+ */
+export function filterRowsForBacktestWindow(
+  rows: StockDataRow[],
+  horizonMonths?: number
+): StockDataRow[] {
+  if (!horizonMonths || horizonMonths <= 0 || rows.length === 0) {
+    return rows;
+  }
+
+  const lastRow = rows[rows.length - 1];
+  const lastDate = new Date(lastRow.date);
+  if (isNaN(lastDate.getTime())) return rows;
+
+  const targetStartDate = new Date(lastDate);
+  targetStartDate.setMonth(targetStartDate.getMonth() - horizonMonths);
+
+  const filtered = rows.filter((r) => {
+    const d = new Date(r.date);
+    return !isNaN(d.getTime()) && d >= targetStartDate;
+  });
+
+  // Ensure we keep at least 10 rows for mathematical validity
+  return filtered.length >= 10 ? filtered : rows;
+}
+
+/**
  * Computes historical Walk-Forward Backtesting
  */
 export function runWalkForwardBacktest(
@@ -193,7 +220,9 @@ export function runWalkForwardBacktest(
   config: QuantitativeConfig,
   sentimentMultiplier: number = 1.0
 ): { metrics: BacktestMetrics; backtestSeries: StockDataRow[] } {
-  const prices = rows.map((r) => r.close);
+  // Respect configured backtest horizon in months (e.g. 1, 3, 6 months)
+  const targetRows = filterRowsForBacktestWindow(rows, config.backtestHorizonMonths);
+  const prices = targetRows.map((r) => r.close);
   const total = prices.length;
 
   if (total < 4) {
@@ -206,7 +235,7 @@ export function runWalkForwardBacktest(
         maxError: 0,
         sampleCount: 0,
       },
-      backtestSeries: rows,
+      backtestSeries: targetRows,
     };
   }
 
@@ -220,7 +249,7 @@ export function runWalkForwardBacktest(
   const weights = config.weights;
   const totalWeight = weights.ma + weights.regression + weights.momentum || 1;
 
-  const updatedRows = [...rows];
+  const updatedRows = [...targetRows];
 
   for (let i = startIdx; i < total; i++) {
     const historyPrices = prices.slice(0, i);

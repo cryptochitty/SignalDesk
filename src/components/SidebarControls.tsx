@@ -106,6 +106,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
           {[80, 90, 95].map((level) => (
             <button
               key={level}
+              type="button"
               onClick={() => onConfigChange({ ...config, confidenceLevel: level })}
               className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
                 config.confidenceLevel === level
@@ -116,6 +117,50 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
               {level}% Band
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* 4. Backtest Time Window Selector */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="font-semibold text-xs text-slate-300 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+            Backtest Time Window
+          </label>
+          <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+            {config.backtestHorizonMonths === 6 || !config.backtestHorizonMonths
+              ? "6 Months Active"
+              : config.backtestHorizonMonths === 0
+              ? "All History"
+              : `${config.backtestHorizonMonths} Mo Window`}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[
+            { months: 1, label: "1 Month" },
+            { months: 3, label: "3 Months" },
+            { months: 6, label: "6 Months" },
+            { months: 0, label: "All Data" },
+          ].map((opt) => {
+            const isActive =
+              (config.backtestHorizonMonths ?? 6) === opt.months;
+            return (
+              <button
+                key={opt.months}
+                type="button"
+                onClick={() =>
+                  onConfigChange({ ...config, backtestHorizonMonths: opt.months })
+                }
+                className={`py-1.5 px-1 text-[11px] font-bold rounded-lg border transition-all text-center ${
+                  isActive
+                    ? "bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/20"
+                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
