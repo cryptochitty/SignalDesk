@@ -17,8 +17,10 @@ const POPULAR_SUGGESTIONS = [
   { name: "Nvidia", symbol: "NVDA", icon: "🇺🇸" },
   { name: "Tesla", symbol: "TSLA", icon: "🇺🇸" },
   { name: "Apple", symbol: "AAPL", icon: "🇺🇸" },
-  { name: "NIFTY 50", symbol: "NIFTY50", icon: "📊" },
-  { name: "Bitcoin", symbol: "BTC", icon: "⚡" },
+  { name: "Bitcoin (Hyperliquid)", symbol: "HL:BTC", icon: "💧" },
+  { name: "Ethereum (Hyperliquid)", symbol: "HL:ETH", icon: "💧" },
+  { name: "Solana (Hyperliquid)", symbol: "HL:SOL", icon: "💧" },
+  { name: "Sui (Hyperliquid)", symbol: "HL:SUI", icon: "💧" },
 ];
 
 export const StockSearchBar: React.FC<StockSearchBarProps> = ({
@@ -56,11 +58,15 @@ export const StockSearchBar: React.FC<StockSearchBarProps> = ({
             </h2>
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Yahoo Finance Real-Time API
+              Yahoo Finance & Hyperliquid L1 API
+            </span>
+            <span className="bg-sky-500/20 text-sky-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-sky-500/30 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+              Twitter/X Social Feed Active
             </span>
           </div>
           <p className="text-xs text-slate-400">
-            Type any Stock Name or Ticker Symbol below (e.g. <span className="text-indigo-300 font-semibold">Tata Motors</span>, <span className="text-indigo-300 font-semibold">INFY</span>, <span className="text-indigo-300 font-semibold">NVDA</span>, <span className="text-indigo-300 font-semibold">Reliance</span>, <span className="text-indigo-300 font-semibold">Tesla</span>, <span className="text-indigo-300 font-semibold">Bitcoin</span>) for real live price datasets & quantitative analysis.
+            Type any Stock or Crypto Ticker (e.g. <span className="text-indigo-300 font-semibold">Tata Motors</span>, <span className="text-indigo-300 font-semibold">NVDA</span>, <span className="text-cyan-300 font-semibold">HL:BTC</span>, <span className="text-cyan-300 font-semibold">HL:ETH</span>, <span className="text-cyan-300 font-semibold">HL:SOL</span>) for live Hyperliquid DEX candles, Yahoo Finance, & X social chatter.
           </p>
         </div>
 

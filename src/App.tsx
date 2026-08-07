@@ -11,9 +11,12 @@ import { MethodBreakdown } from "./components/MethodBreakdown";
 import { BacktestDetailsModal } from "./components/BacktestDetailsModal";
 import { PriceAlertToastContainer } from "./components/PriceAlertToastContainer";
 import { PriceThresholdCard } from "./components/PriceThresholdCard";
+import { TwitterSocialFeed } from "./components/TwitterSocialFeed";
+import { AppSuccessDashboard } from "./components/AppSuccessDashboard";
 import { STOCK_PRESETS } from "./utils/sampleData";
 import { parseCSV } from "./utils/csvParser";
 import { generatePrediction } from "./utils/quantEngine";
+import { fetchHyperliquidCandles } from "./utils/hyperliquid";
 import {
   IngestionTab,
   QuantitativeConfig,
@@ -71,19 +74,45 @@ export default function App() {
     setIsStockSearching(true);
     setStockSearchError(null);
     try {
-      let data: any = null;
-      try {
-        const res = await fetch("/api/ai-stock-search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query }),
-        });
+      const cleanQuery = query.trim();
+      const isHyperliquid = cleanQuery.toUpperCase().startsWith("HL:") ||
+        cleanQuery.toUpperCase().includes("HYPERLIQUID") ||
+        ["BTC", "ETH", "SOL", "SUI", "AVAX", "HYPE", "XRP"].includes(cleanQuery.toUpperCase());
 
-        if (res.ok) {
-          data = await res.json();
+      let data: any = null;
+
+      if (isHyperliquid) {
+        const coin = cleanQuery.toUpperCase().replace("HL:", "").replace("HYPERLIQUID", "").trim() || "BTC";
+        try {
+          const hlData = await fetchHyperliquidCandles(coin, "1d", 30);
+          if (hlData && hlData.csvData) {
+            data = {
+              symbol: coin,
+              companyName: `${coin} Perpetual (Hyperliquid L1 DEX)`,
+              currency: "$",
+              csvData: hlData.csvData,
+              dataSource: "Hyperliquid L1 Perpetual DEX API",
+            };
+          }
+        } catch (err) {
+          console.warn("Hyperliquid fetch error, falling back to market search:", err);
         }
-      } catch (err) {
-        console.warn("Server search API unreachable, using client fallback engine:", err);
+      }
+
+      if (!data) {
+        try {
+          const res = await fetch("/api/ai-stock-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query }),
+          });
+
+          if (res.ok) {
+            data = await res.json();
+          }
+        } catch (err) {
+          console.warn("Server search API unreachable, using client fallback engine:", err);
+        }
       }
 
       // If server API fails or returns null/non-ok (e.g. Vercel static fallback), generate fallback stock dataset
@@ -632,6 +661,21 @@ export default function App() {
             />
           </div>
         </div>
+
+        {/* X / Twitter Social Media Sentiment & Live Stream */}
+        <TwitterSocialFeed
+          stockSymbol={stockSymbol}
+          companyName={selectedPreset.companyName || stockSymbol}
+          currency={activeCurrency}
+          sentimentData={sentimentData}
+        />
+
+        {/* System Success Rate & Performance Analytics Dashboard */}
+        <AppSuccessDashboard
+          prediction={prediction}
+          stockSymbol={stockSymbol}
+          currency={activeCurrency}
+        />
 
         {/* Bottom Panel: Method Breakdown & AI Desk Commentary */}
         <MethodBreakdown
