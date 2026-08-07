@@ -1,0 +1,140 @@
+export interface StockDataRow {
+  date: string;
+  close: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  volume?: number;
+  // Computed indicators on historical points
+  ma?: number;
+  reg?: number;
+  momentum?: number;
+  backtestPred?: number;
+  backtestError?: number;
+}
+
+export interface ModelWeights {
+  ma: number;         // 0 to 1 weight
+  regression: number; // 0 to 1 weight
+  momentum: number;   // 0 to 1 weight
+  sentiment: number;  // 0 to 1 weight
+}
+
+export interface QuantitativeConfig {
+  maWindow: number;          // e.g. 3, 5, 10, 20 days
+  forecastHorizon: number;   // e.g. 1 to 14 days
+  confidenceLevel: number;   // e.g. 80, 90, 95 (%)
+  weights: ModelWeights;
+}
+
+export interface BacktestMetrics {
+  mae: number;               // Mean Absolute Error in currency units
+  maePercent: number;        // MAE as percentage of price
+  rmse: number;              // Root Mean Square Error
+  directionalAccuracy: number; // % of times predicted trend direction matched actual trend
+  maxError: number;          // Maximum prediction error
+  sampleCount: number;       // Number of historical points backtested
+}
+
+export interface ForecastPoint {
+  date: string;
+  price: number;
+  lowBand: number;
+  highBand: number;
+  isForecast: boolean;
+  isBacktest?: boolean;
+}
+
+export interface PredictionResult {
+  symbol: string;
+  currency: string;
+  lastClose: number;
+  currentPrice: number;
+  nextClose: number;
+  percentChange: number;
+  lowBand: number;
+  highBand: number;
+  maPrediction: number;
+  regressionPrediction: number;
+  momentumPrediction: number;
+  sentimentAdjustedNextClose: number;
+  backtestMetrics: BacktestMetrics;
+  chartData: Array<{
+    date: string;
+    actualClose?: number;
+    ma?: number;
+    reg?: number;
+    backtestPred?: number;
+    forecastPrice?: number;
+    lowBand?: number;
+    highBand?: number;
+    isForecast?: boolean;
+  }>;
+}
+
+export interface SentimentPost {
+  source: string;
+  text: string;
+  sentiment: 'Bullish' | 'Bearish' | 'Neutral' | string;
+  timestamp?: string;
+}
+
+export interface SentimentAnalysisData {
+  symbol: string;
+  score: number; // -100 to +100
+  label: string; // Bullish, Bearish, Neutral
+  sentimentMultiplier: number; // e.g. 0.95 to 1.05 factor
+  keyDrivers: string[];
+  summary: string;
+  samplePosts: SentimentPost[];
+  references?: Array<{ title: string; uri: string }>;
+}
+
+export type IngestionTab = 'csv' | 'url' | 'ocr' | 'social';
+
+export interface DailyRecommendation {
+  id: string;
+  symbol: string;
+  companyName: string;
+  currency: string;
+  currentPrice: number;
+  targetPrice: number;
+  stopLoss: number;
+  expectedReturnPct: number;
+  signal: 'STRONG BUY' | 'BUY' | 'ACCUMULATE' | 'HOLD' | 'WATCH';
+  timeframe: string;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  rationale: string;
+  category: string;
+  keyCatalysts: string[];
+}
+
+export interface StockPreset {
+  id: string;
+  symbol: string;
+  name: string;
+  currency: string;
+  category: 'NSE India' | 'US Tech' | 'Crypto' | 'Indices' | 'Uploaded Image / Scan' | 'URL Import' | string;
+  csvData: string;
+  companyName: string;
+}
+
+export interface PriceAlertThreshold {
+  enabled: boolean;
+  targetPrice: number;
+  condition: 'exceeds' | 'falls_below' | 'either';
+  stockSymbol: string;
+}
+
+export interface ToastAlert {
+  id: string;
+  type: 'exceeded' | 'dropped' | 'info';
+  title: string;
+  message: string;
+  symbol: string;
+  predictedPrice: number;
+  targetThreshold: number;
+  currency: string;
+  timestamp: string;
+}
+

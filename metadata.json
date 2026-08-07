@@ -1,0 +1,6 @@
+{
+  "name": "Signal Desk",
+  "description": "Quantitative stock prediction & backtesting platform with multi-modal ingestion (CSV, URL, OCR, Social Media Sentiment) and ensemble forecasting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

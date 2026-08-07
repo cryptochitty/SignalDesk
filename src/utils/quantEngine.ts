@@ -1,0 +1,409 @@
+import {
+  StockDataRow,
+  QuantitativeConfig,
+  PredictionResult,
+  BacktestMetrics,
+  SentimentAnalysisData,
+} from "../types";
+
+/**
+ * Calculates Simple Moving Average for a given window size
+ */
+export function calculateMA(prices: number[], windowSize: number): number {
+  if (prices.length === 0) return 0;
+  const actualWindow = Math.min(windowSize, prices.length);
+  const subset = prices.slice(prices.length - actualWindow);
+  const sum = subset.reduce((acc, val) => acc + val, 0);
+  return sum / actualWindow;
+}
+
+/**
+ * Calculates Exponential Moving Average (EMA)
+ */
+export function calculateEMA(prices: number[], windowSize: number): number {
+  if (prices.length === 0) return 0;
+  const actualWindow = Math.min(windowSize, prices.length);
+  const k = 2 / (actualWindow + 1);
+
+  let ema = prices[prices.length - actualWindow];
+  for (let i = prices.length - actualWindow + 1; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+/**
+ * Fits Linear Regression (OLS) over recent points
+ * Returns { slope, intercept, predict(x) }
+ */
+export function calculateLinearRegression(prices: number[]): {
+  slope: number;
+  intercept: number;
+  predictNext: (stepsAhead: number) => number;
+} {
+  const n = prices.length;
+  if (n <= 1) {
+    const val = prices[0] || 0;
+    return { slope: 0, intercept: val, predictNext: () => val };
+  }
+
+  // Fit OLS on up to the most recent 30 price points for accurate local trend modeling
+  const lookback = Math.min(30, n);
+  const subset = prices.slice(n - lookback);
+  const m = subset.length;
+
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumXX = 0;
+
+  for (let i = 0; i < m; i++) {
+    const x = i;
+    const y = subset[i];
+    sumX += x;
+    sumY += y;
+    sumXY += x * y;
+    sumXX += x * x;
+  }
+
+  const denominator = m * sumXX - sumX * sumX;
+  const slope = denominator !== 0 ? (m * sumXY - sumX * sumY) / denominator : 0;
+  const intercept = (sumY - slope * sumX) / m;
+  const lastPrice = prices[n - 1];
+
+  return {
+    slope,
+    intercept,
+    predictNext: (stepsAhead: number) => {
+      const targetX = m - 1 + stepsAhead;
+      const rawPred = slope * targetX + intercept;
+
+      // Bound predictions relative to last price to prevent unrealistic extrapolation explosion
+      const maxChangeFraction = Math.min(0.20, 0.03 * stepsAhead + 0.05);
+      const minBound = lastPrice * (1 - maxChangeFraction);
+      const maxBound = lastPrice * (1 + maxChangeFraction);
+
+      return Math.min(maxBound, Math.max(minBound, rawPred));
+    },
+  };
+}
+
+/**
+ * Calculates Momentum velocity over a window
+ */
+export function calculateMomentumPrediction(prices: number[], lookback: number = 3): number {
+  const n = prices.length;
+  if (n <= 1) return prices[0] || 0;
+
+  const actualLookback = Math.min(lookback, n - 1);
+  const current = prices[n - 1];
+  const previous = prices[n - 1 - actualLookback];
+
+  if (!previous || previous <= 0) return current;
+
+  const momentumRate = (current - previous) / previous; // percentage change
+  // Project momentum forward with damped persistence coefficient and realistic 1-step bounds (max +/- 10%)
+  const clampedRate = Math.max(-0.10, Math.min(0.10, momentumRate * 0.7));
+  return current * (1 + clampedRate);
+}
+
+/**
+ * Safely adds days to a date string (YYYY-MM-DD) using UTC arithmetic.
+ * Prevents "RangeError: Invalid time value" and DST/timezone shifts.
+ */
+export function getFutureDateString(baseDateStr: string, daysToAdd: number): string {
+  if (!baseDateStr) {
+    const now = new Date();
+    now.setUTCDate(now.getUTCDate() + daysToAdd);
+    const y = now.getUTCFullYear();
+    const m = String(now.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(now.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const clean = baseDateStr.trim();
+  const ymdMatch = clean.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+
+  let dateObj: Date;
+
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    dateObj = new Date(Date.UTC(year, month, day));
+  } else {
+    dateObj = new Date(clean);
+  }
+
+  if (isNaN(dateObj.getTime())) {
+    const fallback = new Date();
+    fallback.setUTCDate(fallback.getUTCDate() + daysToAdd);
+    const y = fallback.getUTCFullYear();
+    const m = String(fallback.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(fallback.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const futureTime = dateObj.getTime() + daysToAdd * 24 * 60 * 60 * 1000;
+  const futureDate = new Date(futureTime);
+
+  if (isNaN(futureDate.getTime())) {
+    return `+${daysToAdd}d`;
+  }
+
+  const y = futureDate.getUTCFullYear();
+  const m = String(futureDate.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(futureDate.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Standard deviation of historical daily returns for volatility band
+ */
+export function calculateVolatility(prices: number[]): number {
+  if (prices.length <= 1) return 0.02; // default 2% daily volatility
+
+  const returns: number[] = [];
+  for (let i = 1; i < prices.length; i++) {
+    const ret = (prices[i] - prices[i - 1]) / prices[i - 1];
+    returns.push(ret);
+  }
+
+  const meanReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const variance =
+    returns.reduce((acc, r) => acc + Math.pow(r - meanReturn, 2), 0) / (returns.length - 1 || 1);
+
+  return Math.sqrt(variance);
+}
+
+/**
+ * Z-score multiplier for confidence level
+ */
+export function getZScore(confidenceLevel: number): number {
+  if (confidenceLevel >= 95) return 1.96;
+  if (confidenceLevel >= 90) return 1.645;
+  return 1.28; // 80%
+}
+
+/**
+ * Computes historical Walk-Forward Backtesting
+ */
+export function runWalkForwardBacktest(
+  rows: StockDataRow[],
+  config: QuantitativeConfig,
+  sentimentMultiplier: number = 1.0
+): { metrics: BacktestMetrics; backtestSeries: StockDataRow[] } {
+  const prices = rows.map((r) => r.close);
+  const total = prices.length;
+
+  if (total < 4) {
+    return {
+      metrics: {
+        mae: 0,
+        maePercent: 0,
+        rmse: 0,
+        directionalAccuracy: 100,
+        maxError: 0,
+        sampleCount: 0,
+      },
+      backtestSeries: rows,
+    };
+  }
+
+  const startIdx = Math.max(3, Math.floor(total * 0.3)); // use first 30% as burn-in window
+  let totalError = 0;
+  let totalSqError = 0;
+  let maxError = 0;
+  let correctDirectionCount = 0;
+  let testSamples = 0;
+
+  const weights = config.weights;
+  const totalWeight = weights.ma + weights.regression + weights.momentum || 1;
+
+  const updatedRows = [...rows];
+
+  for (let i = startIdx; i < total; i++) {
+    const historyPrices = prices.slice(0, i);
+    const actualPrice = prices[i];
+    const prevActual = prices[i - 1];
+
+    // Predict for index i using history up to i-1
+    const maPred = calculateMA(historyPrices, config.maWindow);
+    const regRes = calculateLinearRegression(historyPrices);
+    const regPred = regRes.predictNext(1);
+    const momPred = calculateMomentumPrediction(historyPrices, 3);
+
+    let ensemblePred =
+      (weights.ma * maPred + weights.regression * regPred + weights.momentum * momPred) /
+      totalWeight;
+
+    // Apply sentiment factor if sentiment weight > 0
+    if (weights.sentiment > 0 && sentimentMultiplier !== 1.0) {
+      const sentimentEffect = (sentimentMultiplier - 1.0) * weights.sentiment;
+      ensemblePred = ensemblePred * (1 + sentimentEffect);
+    }
+
+    const absErr = Math.abs(ensemblePred - actualPrice);
+    totalError += absErr;
+    totalSqError += absErr * absErr;
+    if (absErr > maxError) maxError = absErr;
+
+    // Direction check
+    const actualDirection = Math.sign(actualPrice - prevActual);
+    const predDirection = Math.sign(ensemblePred - prevActual);
+    if (actualDirection === predDirection || actualDirection === 0) {
+      correctDirectionCount++;
+    }
+
+    testSamples++;
+
+    updatedRows[i] = {
+      ...updatedRows[i],
+      ma: Math.round(maPred * 100) / 100,
+      reg: Math.round(regPred * 100) / 100,
+      momentum: Math.round(momPred * 100) / 100,
+      backtestPred: Math.round(ensemblePred * 100) / 100,
+      backtestError: Math.round(absErr * 100) / 100,
+    };
+  }
+
+  const mae = testSamples > 0 ? totalError / testSamples : 0;
+  const rmse = testSamples > 0 ? Math.sqrt(totalSqError / testSamples) : 0;
+  const lastPrice = prices[prices.length - 1] || 1;
+  const maePercent = (mae / lastPrice) * 100;
+  const directionalAccuracy =
+    testSamples > 0 ? (correctDirectionCount / testSamples) * 100 : 100;
+
+  return {
+    metrics: {
+      mae: Math.round(mae * 100) / 100,
+      maePercent: Math.round(maePercent * 10) / 10,
+      rmse: Math.round(rmse * 100) / 100,
+      directionalAccuracy: Math.round(directionalAccuracy * 10) / 10,
+      maxError: Math.round(maxError * 100) / 100,
+      sampleCount: testSamples,
+    },
+    backtestSeries: updatedRows,
+  };
+}
+
+/**
+ * Generates full Ensemble Prediction & Multi-Day Horizon Forecast
+ */
+export function generatePrediction(
+  symbol: string,
+  currency: string,
+  rows: StockDataRow[],
+  config: QuantitativeConfig,
+  sentimentData?: SentimentAnalysisData | null
+): PredictionResult | null {
+  if (!rows || rows.length === 0) return null;
+
+  const prices = rows.map((r) => r.close);
+  const lastClose = prices[prices.length - 1];
+
+  // Sentiment multiplier factor
+  const sentimentMultiplier =
+    sentimentData && config.weights.sentiment > 0
+      ? sentimentData.sentimentMultiplier
+      : 1.0;
+
+  // Run Walk-Forward Backtest first
+  const { metrics, backtestSeries } = runWalkForwardBacktest(rows, config, sentimentMultiplier);
+
+  // Calculate individual model 1-step predictions
+  const maPrediction = calculateMA(prices, config.maWindow);
+  const regResult = calculateLinearRegression(prices);
+  const regressionPrediction = regResult.predictNext(1);
+  const momentumPrediction = calculateMomentumPrediction(prices, 3);
+
+  // Raw weighted ensemble
+  const weights = config.weights;
+  const totalWeight = weights.ma + weights.regression + weights.momentum || 1;
+
+  const rawEnsemble =
+    (weights.ma * maPrediction +
+      weights.regression * regressionPrediction +
+      weights.momentum * momentumPrediction) /
+    totalWeight;
+
+  // Sentiment adjustment
+  let sentimentAdjustedNextClose = rawEnsemble;
+  if (weights.sentiment > 0 && sentimentMultiplier !== 1.0) {
+    const sentimentEffect = (sentimentMultiplier - 1.0) * weights.sentiment;
+    sentimentAdjustedNextClose = rawEnsemble * (1 + sentimentEffect);
+  }
+
+  // Clamp 1-day prediction to realistic financial step boundaries (max +/- 15%)
+  const minAllowed = lastClose * 0.85;
+  const maxAllowed = lastClose * 1.15;
+  const nextClose = Math.min(maxAllowed, Math.max(minAllowed, sentimentAdjustedNextClose));
+  const percentChange = ((nextClose - lastClose) / lastClose) * 100;
+
+  // Calculate Volatility Confidence Bands
+  const volatility = calculateVolatility(prices);
+  const zScore = getZScore(config.confidenceLevel);
+  const margin1Day = zScore * volatility * lastClose;
+
+  const lowBand = Math.max(0, nextClose - margin1Day);
+  const highBand = nextClose + margin1Day;
+
+  // Build combined chart points (Historical + Backtest + Future Forecast Horizon)
+  const chartData: PredictionResult["chartData"] = backtestSeries.map((r) => ({
+    date: r.date,
+    actualClose: r.close,
+    ma: r.ma,
+    reg: r.reg,
+    backtestPred: r.backtestPred,
+    isForecast: false,
+  }));
+
+  // Append future horizon forecast points
+  const lastRowDate = rows[rows.length - 1]?.date || "";
+  for (let k = 1; k <= config.forecastHorizon; k++) {
+    const dateStr = getFutureDateString(lastRowDate, k);
+
+    // Project each model k steps ahead
+    const kMa = maPrediction; // MA stays constant or slow decay
+    const kReg = regResult.predictNext(k);
+    const kMom = momentumPrediction * Math.pow(0.95, k - 1); // decaying momentum
+
+    let kEnsemble =
+      (weights.ma * kMa + weights.regression * kReg + weights.momentum * kMom) /
+      totalWeight;
+
+    if (weights.sentiment > 0 && sentimentMultiplier !== 1.0) {
+      const sentimentEffect = (sentimentMultiplier - 1.0) * weights.sentiment * Math.pow(0.9, k - 1);
+      kEnsemble = kEnsemble * (1 + sentimentEffect);
+    }
+
+    const kMargin = zScore * volatility * Math.sqrt(k) * lastClose;
+    const kLow = Math.max(0, kEnsemble - kMargin);
+    const kHigh = kEnsemble + kMargin;
+
+    chartData.push({
+      date: dateStr,
+      forecastPrice: Math.round(kEnsemble * 100) / 100,
+      lowBand: Math.round(kLow * 100) / 100,
+      highBand: Math.round(kHigh * 100) / 100,
+      isForecast: true,
+    });
+  }
+
+  return {
+    symbol,
+    currency,
+    lastClose: Math.round(lastClose * 100) / 100,
+    currentPrice: Math.round(lastClose * 100) / 100,
+    nextClose: Math.round(nextClose * 100) / 100,
+    percentChange: Math.round(percentChange * 100) / 100,
+    lowBand: Math.round(lowBand * 100) / 100,
+    highBand: Math.round(highBand * 100) / 100,
+    maPrediction: Math.round(maPrediction * 100) / 100,
+    regressionPrediction: Math.round(regressionPrediction * 100) / 100,
+    momentumPrediction: Math.round(momentumPrediction * 100) / 100,
+    sentimentAdjustedNextClose: Math.round(sentimentAdjustedNextClose * 100) / 100,
+    backtestMetrics: metrics,
+    chartData,
+  };
+}
