@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell } from "lucide-react";
+import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell, FileText } from "lucide-react";
 import { StockPreset } from "../types";
 import { STOCK_PRESETS } from "../utils/sampleData";
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   isSearching?: boolean;
   notificationCount?: number;
   onScrollToAlerts?: () => void;
+  onOpenPdfReportModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   isSearching = false,
   notificationCount = 0,
   onScrollToAlerts,
+  onOpenPdfReportModal,
 }) => {
 
   const [headerQuery, setHeaderQuery] = useState("");
@@ -83,8 +85,20 @@ export const Header: React.FC<HeaderProps> = ({
           </form>
         )}
 
-        {/* Quick Stock Selector & Notification Bell */}
+        {/* Quick Stock Selector, PDF Report & Notification Bell */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          {/* PDF Report Download Button */}
+          {onOpenPdfReportModal && (
+            <button
+              onClick={onOpenPdfReportModal}
+              className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer shadow-sm"
+              title="Generate Downloadable PDF Summary Report"
+            >
+              <FileText className="w-4 h-4 text-indigo-400 group-hover:text-white" />
+              <span className="hidden sm:inline">PDF Report</span>
+            </button>
+          )}
+
           {/* Price Alert Monitor Bell */}
           {onScrollToAlerts && (
             <button

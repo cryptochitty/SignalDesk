@@ -138,3 +138,22 @@ export interface ToastAlert {
   timestamp: string;
 }
 
+export interface MutualFundSuggestion {
+  id: string;
+  fundName: string;
+  category: 'Large Cap' | 'Mid Cap' | 'Flexi Cap' | 'Dividend Yield' | 'Debt & Hybrid' | 'Index / ETF' | 'Global / Tech';
+  cagr3Y: number; // 3-Year CAGR %
+  cagr5Y: number; // 5-Year CAGR %
+  dividendYield: number; // Dividend Yield %
+  expenseRatio: number; // Expense Ratio %
+  aumInCr: number; // AUM in Crores or $M
+  riskRating: 'Low' | 'Moderate' | 'High' | 'Very High';
+  starRating: 1 | 2 | 3 | 4 | 5;
+  fundHouse: string;
+  topHoldings: string[];
+  recommendedStrategy: 'Growth & Wealth Creation' | 'Regular Income & Dividends' | 'Capital Preservation' | 'Aggressive Growth';
+  currency: string;
+  minSipAmount: number;
+  dividendFrequency: 'Quarterly' | 'Monthly' | 'Annually';
+}
+

@@ -13,6 +13,8 @@ import { PriceAlertToastContainer } from "./components/PriceAlertToastContainer"
 import { PriceThresholdCard } from "./components/PriceThresholdCard";
 import { TwitterSocialFeed } from "./components/TwitterSocialFeed";
 import { AppSuccessDashboard } from "./components/AppSuccessDashboard";
+import { MutualFundSuggestions } from "./components/MutualFundSuggestions";
+import { PdfReportGeneratorModal } from "./components/PdfReportGeneratorModal";
 import { STOCK_PRESETS } from "./utils/sampleData";
 import { parseCSV } from "./utils/csvParser";
 import { generatePrediction } from "./utils/quantEngine";
@@ -57,6 +59,7 @@ export default function App() {
   const [activeDataSource, setActiveDataSource] = useState<string | null>(null);
 
   const [isBacktestModalOpen, setIsBacktestModalOpen] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   // Price Threshold & Toast Notification state
   const alertSectionRef = useRef<HTMLDivElement>(null);
@@ -572,6 +575,7 @@ export default function App() {
         isSearching={isStockSearching}
         notificationCount={toasts.length}
         onScrollToAlerts={handleScrollToAlerts}
+        onOpenPdfReportModal={() => setIsPdfModalOpen(true)}
       />
 
       {/* Main Workspace Container */}
@@ -677,6 +681,12 @@ export default function App() {
           currency={activeCurrency}
         />
 
+        {/* Mutual Fund Investment Suggestions based on Return, Dividend & Risk Factors */}
+        <MutualFundSuggestions
+          currentStockSymbol={stockSymbol}
+          currency={activeCurrency}
+        />
+
         {/* Bottom Panel: Method Breakdown & AI Desk Commentary */}
         <MethodBreakdown
           prediction={prediction}
@@ -699,6 +709,17 @@ export default function App() {
         onClose={() => setIsBacktestModalOpen(false)}
         prediction={prediction}
         currency={activeCurrency}
+      />
+
+      {/* PDF Quantitative Report Generator Modal */}
+      <PdfReportGeneratorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        prediction={prediction}
+        stockSymbol={stockSymbol}
+        selectedPreset={selectedPreset}
+        currency={activeCurrency}
+        sentimentData={sentimentData}
       />
 
       {/* Floating Price Alert Toast Notification Container */}
