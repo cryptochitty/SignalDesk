@@ -4,6 +4,7 @@ import { StockSearchBar } from "./components/StockSearchBar";
 import { DailyRecommendations } from "./components/DailyRecommendations";
 import { ActiveStockRecommendation } from "./components/ActiveStockRecommendation";
 import { IntradayPredictionCard } from "./components/IntradayPredictionCard";
+import { WeeklyForwardProjectionCard } from "./components/WeeklyForwardProjectionCard";
 import { DataIngestionTab } from "./components/DataIngestionTab";
 import { MetricsCards } from "./components/MetricsCards";
 import { ChartPanel } from "./components/ChartPanel";
@@ -608,6 +609,14 @@ export default function App() {
         {/* Intraday Buying & Selling Range Prediction Engine */}
         <IntradayPredictionCard
           intraday={prediction?.intradayPrediction}
+          symbol={stockSymbol}
+          currency={activeCurrency}
+          currentPrice={prediction?.currentPrice || 100}
+        />
+
+        {/* 1-Week Forward Projection Card */}
+        <WeeklyForwardProjectionCard
+          projection={prediction?.weeklyProjection}
           symbol={stockSymbol}
           currency={activeCurrency}
           currentPrice={prediction?.currentPrice || 100}

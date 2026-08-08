@@ -79,6 +79,32 @@ export interface IntradayPrediction {
   intradayHourlyCurve: HourlySessionPoint[];
 }
 
+export interface WeeklyForwardDay {
+  dayNumber: number;        // 1 to 5
+  date: string;             // e.g., "Aug 10, 2026"
+  dayName: string;          // e.g., "Mon", "Tue"
+  predictedClose: number;
+  expectedLow: number;
+  expectedHigh: number;
+  dailyChangePct: number;
+  cumulativeChangePct: number;
+  trendSignal: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  confidenceScore: number;
+}
+
+export interface WeeklyForwardProjection {
+  symbol: string;
+  currency: string;
+  startPrice: number;
+  endOfWeekTarget: number;
+  weeklyChangePct: number;
+  weeklyLow: number;
+  weeklyHigh: number;
+  overallBias: 'BULLISH CONTINUATION' | 'MODERATE GAIN' | 'SIDEWAYS / NEUTRAL' | 'BEARISH PULLBACK';
+  weeklyConfidence: number;
+  dailyProjections: WeeklyForwardDay[];
+}
+
 export interface PredictionResult {
   symbol: string;
   currency: string;
@@ -94,6 +120,7 @@ export interface PredictionResult {
   sentimentAdjustedNextClose: number;
   backtestMetrics: BacktestMetrics;
   intradayPrediction?: IntradayPrediction;
+  weeklyProjection?: WeeklyForwardProjection;
   chartData: Array<{
     date: string;
     actualClose?: number;

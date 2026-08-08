@@ -4,6 +4,8 @@ import {
   PredictionResult,
   BacktestMetrics,
   SentimentAnalysisData,
+  WeeklyForwardProjection,
+  WeeklyForwardDay,
 } from "../types";
 
 /**
@@ -436,6 +438,17 @@ export function generatePrediction(
     sentimentData?.score || 0
   );
 
+  // Generate 1-Week Forward Projection
+  const weeklyProjection = calculateWeeklyForwardProjection(
+    symbol,
+    currency,
+    lastClose,
+    volatility,
+    rows,
+    chartData,
+    sentimentData?.score || 0
+  );
+
   return {
     symbol,
     currency,
@@ -451,6 +464,7 @@ export function generatePrediction(
     sentimentAdjustedNextClose: Math.round(sentimentAdjustedNextClose * 100) / 100,
     backtestMetrics: metrics,
     intradayPrediction,
+    weeklyProjection,
     chartData,
   };
 }
@@ -593,3 +607,104 @@ export function calculateIntradayPrediction(
     intradayHourlyCurve,
   };
 }
+
+/**
+ * Calculates 1-Week (5-Trading-Day) Forward Projection Model
+ */
+export function calculateWeeklyForwardProjection(
+  symbol: string,
+  currency: string,
+  lastClose: number,
+  volatility: number,
+  rows: StockDataRow[],
+  chartData: PredictionResult["chartData"],
+  sentimentScore: number = 0
+): WeeklyForwardProjection {
+  // Filter future forecast items from chartData
+  const forecastPoints = chartData.filter((c) => c.isForecast);
+  const weekDayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const daysToProject = Math.min(5, forecastPoints.length > 0 ? forecastPoints.length : 5);
+  const dailyProjections: WeeklyForwardDay[] = [];
+
+  let prevClose = lastClose;
+  let minLow = lastClose;
+  let maxHigh = lastClose;
+
+  // Compute future dates starting tomorrow
+  const today = new Date();
+  let dayOffset = 1;
+
+  for (let i = 0; i < daysToProject; i++) {
+    const pt = forecastPoints[i];
+    const dayNum = i + 1;
+
+    // Find next business day
+    const futureDate = new Date(today);
+    futureDate.setDate(today.getDate() + dayOffset);
+    while (futureDate.getDay() === 0 || futureDate.getDay() === 6) {
+      dayOffset++;
+      futureDate.setDate(today.getDate() + dayOffset);
+    }
+    dayOffset++;
+
+    const dayNameIndex = futureDate.getDay() === 0 ? 6 : futureDate.getDay() - 1;
+    const dayName = weekDayNames[dayNameIndex] || `Day ${dayNum}`;
+    const dateStr = pt?.date || futureDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+    const predictedClose = pt?.forecastPrice || prevClose * (1 + (i + 1) * 0.003);
+    const expectedLow = pt?.lowBand || predictedClose * (1 - volatility * Math.sqrt(dayNum));
+    const expectedHigh = pt?.highBand || predictedClose * (1 + volatility * Math.sqrt(dayNum));
+
+    minLow = Math.min(minLow, expectedLow);
+    maxHigh = Math.max(maxHigh, expectedHigh);
+
+    const dailyChangePct = ((predictedClose - prevClose) / prevClose) * 100;
+    const cumulativeChangePct = ((predictedClose - lastClose) / lastClose) * 100;
+
+    let trendSignal: "BULLISH" | "NEUTRAL" | "BEARISH" = "NEUTRAL";
+    if (dailyChangePct > 0.20) trendSignal = "BULLISH";
+    else if (dailyChangePct < -0.20) trendSignal = "BEARISH";
+
+    const dayConfidence = Math.min(95, Math.max(60, Math.round(88 - dayNum * 2.5 + sentimentScore * 0.05)));
+
+    dailyProjections.push({
+      dayNumber: dayNum,
+      date: dateStr,
+      dayName,
+      predictedClose: Math.round(predictedClose * 100) / 100,
+      expectedLow: Math.round(expectedLow * 100) / 100,
+      expectedHigh: Math.round(expectedHigh * 100) / 100,
+      dailyChangePct: Math.round(dailyChangePct * 100) / 100,
+      cumulativeChangePct: Math.round(cumulativeChangePct * 100) / 100,
+      trendSignal,
+      confidenceScore: dayConfidence,
+    });
+
+    prevClose = predictedClose;
+  }
+
+  const endOfWeekTarget = dailyProjections[dailyProjections.length - 1]?.predictedClose || lastClose;
+  const weeklyChangePct = ((endOfWeekTarget - lastClose) / lastClose) * 100;
+
+  let overallBias: WeeklyForwardProjection["overallBias"] = "SIDEWAYS / NEUTRAL";
+  if (weeklyChangePct >= 2.0) overallBias = "BULLISH CONTINUATION";
+  else if (weeklyChangePct > 0.3) overallBias = "MODERATE GAIN";
+  else if (weeklyChangePct <= -1.2) overallBias = "BEARISH PULLBACK";
+
+  const weeklyConfidence = Math.min(92, Math.max(65, Math.round(84 + sentimentScore * 0.08 - volatility * 50)));
+
+  return {
+    symbol,
+    currency,
+    startPrice: Math.round(lastClose * 100) / 100,
+    endOfWeekTarget: Math.round(endOfWeekTarget * 100) / 100,
+    weeklyChangePct: Math.round(weeklyChangePct * 100) / 100,
+    weeklyLow: Math.round(minLow * 100) / 100,
+    weeklyHigh: Math.round(maxHigh * 100) / 100,
+    overallBias,
+    weeklyConfidence,
+    dailyProjections,
+  };
+}
+
