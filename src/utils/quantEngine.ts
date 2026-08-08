@@ -378,14 +378,20 @@ export function generatePrediction(
   const highBand = nextClose + margin1Day;
 
   // Build combined chart points (Historical + Backtest + Future Forecast Horizon)
-  const chartData: PredictionResult["chartData"] = backtestSeries.map((r) => ({
-    date: r.date,
-    actualClose: r.close,
-    ma: r.ma,
-    reg: r.reg,
-    backtestPred: r.backtestPred,
-    isForecast: false,
-  }));
+  const backtestMap = new Map<string, StockDataRow>();
+  backtestSeries.forEach((b) => backtestMap.set(b.date, b));
+
+  const chartData: PredictionResult["chartData"] = rows.map((r) => {
+    const backtestRow = backtestMap.get(r.date);
+    return {
+      date: r.date,
+      actualClose: r.close,
+      ma: backtestRow?.ma,
+      reg: backtestRow?.reg,
+      backtestPred: backtestRow?.backtestPred,
+      isForecast: false,
+    };
+  });
 
   // Append future horizon forecast points
   const lastRowDate = rows[rows.length - 1]?.date || "";
@@ -419,6 +425,17 @@ export function generatePrediction(
     });
   }
 
+  // Generate Intraday Buying and Selling Range Prediction
+  const intradayPrediction = calculateIntradayPrediction(
+    symbol,
+    currency,
+    lastClose,
+    nextClose,
+    volatility,
+    rows,
+    sentimentData?.score || 0
+  );
+
   return {
     symbol,
     currency,
@@ -433,6 +450,146 @@ export function generatePrediction(
     momentumPrediction: Math.round(momentumPrediction * 100) / 100,
     sentimentAdjustedNextClose: Math.round(sentimentAdjustedNextClose * 100) / 100,
     backtestMetrics: metrics,
+    intradayPrediction,
     chartData,
+  };
+}
+
+/**
+ * Calculates Intraday Entry (Buy) and Exit (Sell) Targets, Pivots, and Session Curve
+ */
+export function calculateIntradayPrediction(
+  symbol: string,
+  currency: string,
+  lastClose: number,
+  nextClose: number,
+  volatility: number,
+  rows: StockDataRow[],
+  sentimentScore: number = 0
+) {
+  const lastRow = rows[rows.length - 1];
+  const dailyVolPct = Math.max(0.010, Math.min(0.060, volatility));
+
+  // Determine High, Low, Close for floor pivot points
+  const prevClose = lastClose;
+  const prevHigh = lastRow?.high && lastRow.high > 0 ? lastRow.high : prevClose * (1 + dailyVolPct * 0.7);
+  const prevLow = lastRow?.low && lastRow.low > 0 ? lastRow.low : prevClose * (1 - dailyVolPct * 0.7);
+
+  // Standard Floor Pivot Calculations
+  const PP = (prevHigh + prevLow + prevClose) / 3;
+  const R1 = (2 * PP) - prevLow;
+  const S1 = (2 * PP) - prevHigh;
+  const R2 = PP + (prevHigh - prevLow);
+  const S2 = PP - (prevHigh - prevLow);
+
+  const priceDiff = nextClose - lastClose;
+  const pctChange = (priceDiff / lastClose) * 100;
+
+  let signal: "STRONG BUY" | "BUY / LONG" | "SELL / SHORT" | "NEUTRAL HOLD" = "BUY / LONG";
+  if (pctChange > 1.2) {
+    signal = "STRONG BUY";
+  } else if (pctChange >= -0.3) {
+    signal = "BUY / LONG";
+  } else if (pctChange < -1.2) {
+    signal = "SELL / SHORT";
+  } else {
+    signal = "NEUTRAL HOLD";
+  }
+
+  // Intraday Buying Zone
+  let buyRangeLow: number;
+  let buyRangeHigh: number;
+  let buyOptimal: number;
+
+  if (signal === "STRONG BUY" || signal === "BUY / LONG") {
+    buyRangeLow = Math.min(prevClose, S1);
+    buyRangeHigh = prevClose * (1 - dailyVolPct * 0.15);
+    buyOptimal = (buyRangeLow + buyRangeHigh) / 2;
+  } else {
+    buyRangeLow = S2;
+    buyRangeHigh = S1;
+    buyOptimal = S1;
+  }
+
+  // Intraday Selling Targets
+  let sellTarget1: number;
+  let sellTarget2: number;
+  let sellTarget3: number;
+
+  if (signal === "STRONG BUY" || signal === "BUY / LONG") {
+    sellTarget1 = Math.max(prevClose * 1.008, PP);
+    sellTarget2 = Math.max(sellTarget1 * 1.012, R1);
+    sellTarget3 = Math.max(sellTarget2 * 1.015, R2);
+  } else {
+    sellTarget1 = prevClose * (1 - dailyVolPct * 0.4);
+    sellTarget2 = S1;
+    sellTarget3 = S2;
+  }
+
+  // Intraday Stop Loss (1:2.8 Risk:Reward ratio)
+  const stopDistance = Math.abs(sellTarget1 - buyOptimal) / 2.8;
+  const stopLoss = buyOptimal - Math.max(prevClose * 0.005, stopDistance);
+
+  // Expected Intraday High and Low
+  const expectedHigh = Math.max(prevHigh, R1, nextClose * (1 + dailyVolPct * 0.4));
+  const expectedLow = Math.min(prevLow, S1, buyRangeLow * 0.995);
+  const expectedVwap = (PP + prevClose + buyOptimal) / 3;
+
+  // Calculate Confidence Score
+  const confidenceScore = Math.min(96, Math.max(68, Math.round(82 + (sentimentScore * 0.1) - (dailyVolPct * 100))));
+
+  // Risk / Reward Ratio
+  const riskAmount = Math.abs(buyOptimal - stopLoss);
+  const rewardAmount = Math.abs(sellTarget2 - buyOptimal);
+  const rrValue = riskAmount > 0 ? (rewardAmount / riskAmount).toFixed(1) : "2.8";
+  const riskRewardRatio = `1 : ${rrValue}`;
+
+  // Hourly Session Trajectory (09:30 AM to 03:30 PM)
+  const sessionHours = [
+    { time: "09:30 AM", factor: -0.25 },
+    { time: "10:30 AM", factor: 0.10 },
+    { time: "12:00 PM", factor: -0.05 },
+    { time: "01:30 PM", factor: 0.40 },
+    { time: "03:00 PM", factor: 0.85 },
+    { time: "03:30 PM", factor: 1.00 },
+  ];
+
+  const totalDelta = nextClose - prevClose;
+  const intradayHourlyCurve = sessionHours.map((h) => {
+    const projPrice = prevClose + totalDelta * h.factor;
+    const sessionVwap = (expectedVwap + projPrice) / 2;
+    const bandMargin = prevClose * dailyVolPct * 0.35;
+    return {
+      time: h.time,
+      predictedPrice: Math.round(projPrice * 100) / 100,
+      vwap: Math.round(sessionVwap * 100) / 100,
+      lowBand: Math.round((projPrice - bandMargin) * 100) / 100,
+      highBand: Math.round((projPrice + bandMargin) * 100) / 100,
+    };
+  });
+
+  return {
+    symbol,
+    currency,
+    currentPrice: Math.round(prevClose * 100) / 100,
+    signal,
+    confidenceScore,
+    buyRangeLow: Math.round(buyRangeLow * 100) / 100,
+    buyRangeHigh: Math.round(buyRangeHigh * 100) / 100,
+    buyOptimal: Math.round(buyOptimal * 100) / 100,
+    sellTarget1: Math.round(sellTarget1 * 100) / 100,
+    sellTarget2: Math.round(sellTarget2 * 100) / 100,
+    sellTarget3: Math.round(sellTarget3 * 100) / 100,
+    stopLoss: Math.round(stopLoss * 100) / 100,
+    expectedHigh: Math.round(expectedHigh * 100) / 100,
+    expectedLow: Math.round(expectedLow * 100) / 100,
+    expectedVwap: Math.round(expectedVwap * 100) / 100,
+    pivotPoint: Math.round(PP * 100) / 100,
+    resistance1: Math.round(R1 * 100) / 100,
+    resistance2: Math.round(R2 * 100) / 100,
+    support1: Math.round(S1 * 100) / 100,
+    support2: Math.round(S2 * 100) / 100,
+    riskRewardRatio,
+    intradayHourlyCurve,
   };
 }

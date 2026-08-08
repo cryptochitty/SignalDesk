@@ -46,6 +46,39 @@ export interface ForecastPoint {
   isBacktest?: boolean;
 }
 
+export interface HourlySessionPoint {
+  time: string;           // e.g. "09:30 AM", "10:30 AM", "12:00 PM", "01:30 PM", "03:00 PM", "03:30 PM"
+  predictedPrice: number;
+  vwap: number;
+  lowBand: number;
+  highBand: number;
+}
+
+export interface IntradayPrediction {
+  symbol: string;
+  currency: string;
+  currentPrice: number;
+  signal: 'STRONG BUY' | 'BUY / LONG' | 'SELL / SHORT' | 'NEUTRAL HOLD';
+  confidenceScore: number; // 0-100%
+  buyRangeLow: number;
+  buyRangeHigh: number;
+  buyOptimal: number;
+  sellTarget1: number;
+  sellTarget2: number;
+  sellTarget3: number;
+  stopLoss: number;
+  expectedHigh: number;
+  expectedLow: number;
+  expectedVwap: number;
+  pivotPoint: number;
+  resistance1: number;
+  resistance2: number;
+  support1: number;
+  support2: number;
+  riskRewardRatio: string; // e.g., "1 : 2.8"
+  intradayHourlyCurve: HourlySessionPoint[];
+}
+
 export interface PredictionResult {
   symbol: string;
   currency: string;
@@ -60,6 +93,7 @@ export interface PredictionResult {
   momentumPrediction: number;
   sentimentAdjustedNextClose: number;
   backtestMetrics: BacktestMetrics;
+  intradayPrediction?: IntradayPrediction;
   chartData: Array<{
     date: string;
     actualClose?: number;

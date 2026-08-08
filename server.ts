@@ -152,80 +152,79 @@ async function fetchLiveYahooStockData(query: string) {
   let yahooSymbol = cleanQuery.toUpperCase();
   let companyName = cleanQuery;
 
-  // 1. Resolve ticker symbol via Yahoo Search API
-  try {
-    const searchUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(cleanQuery)}&quotesCount=5`;
-    const searchRes = await fetch(searchUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-    });
+  // Dictionary for popular Indian / Global stocks or common search terms
+  const upperQ = cleanQuery.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const indianMap: Record<string, string> = {
+    URBAN: "URBAN.NS",
+    URBANCO: "URBAN.NS",
+    URBANCOMPANY: "URBAN.NS",
+    REDINGTON: "REDINGTON.NS",
+    REDINGTONINDIA: "REDINGTON.NS",
+    TATAMOTORS: "TATAMOTORS.NS",
+    TATAMOTOR: "TATAMOTORS.NS",
+    INFY: "INFY.NS",
+    INFOSYS: "INFY.NS",
+    RELIANCE: "RELIANCE.NS",
+    TCS: "TCS.NS",
+    HDFCBANK: "HDFCBANK.NS",
+    ICICIBANK: "ICICIBANK.NS",
+    SBIN: "SBIN.NS",
+    STATEBANKOFINDIA: "SBIN.NS",
+    BHARTIARTL: "BHARTIARTL.NS",
+    AIRTEL: "BHARTIARTL.NS",
+    ITC: "ITC.NS",
+    LT: "LT.NS",
+    LARSEN: "LT.NS",
+    WIPRO: "WIPRO.NS",
+    ZOMATO: "ZOMATO.NS",
+    MARUTI: "MARUTI.NS",
+    BAJFINANCE: "BAJFINANCE.NS",
+    AXISBANK: "AXISBANK.NS",
+    KOTAKBANK: "KOTAKBANK.NS",
+    NIFTY: "^NSEI",
+    NIFTY50: "^NSEI",
+    SENSEX: "^BSESN",
+  };
 
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      if (searchData.quotes && searchData.quotes.length > 0) {
-        const topQuote =
-          searchData.quotes.find(
-            (q: any) =>
-              q.quoteType === "EQUITY" ||
-              q.quoteType === "ETF" ||
-              q.quoteType === "INDEX" ||
-              q.quoteType === "CRYPTOCURRENCY"
-          ) || searchData.quotes[0];
-        if (topQuote.symbol) {
-          yahooSymbol = topQuote.symbol;
-          companyName = topQuote.longname || topQuote.shortname || topQuote.symbol;
+  if (indianMap[upperQ]) {
+    yahooSymbol = indianMap[upperQ];
+  } else {
+    // Resolve ticker symbol via Yahoo Search API
+    try {
+      const searchUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(cleanQuery)}&quotesCount=5`;
+      const searchRes = await fetch(searchUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.quotes && searchData.quotes.length > 0) {
+          const topQuote =
+            searchData.quotes.find(
+              (q: any) =>
+                q.quoteType === "EQUITY" ||
+                q.quoteType === "ETF" ||
+                q.quoteType === "INDEX" ||
+                q.quoteType === "CRYPTOCURRENCY"
+            ) || searchData.quotes[0];
+          if (topQuote?.symbol) {
+            yahooSymbol = topQuote.symbol;
+            companyName = topQuote.longname || topQuote.shortname || topQuote.symbol;
+          }
         }
       }
-    }
-  } catch (err) {
-    console.warn("Yahoo ticker search warning:", err);
-  }
-
-  // Fallback suffix mapping for popular Indian NSE/BSE stocks
-  if (!yahooSymbol.includes(".")) {
-    const upperQ = cleanQuery.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const indianMap: Record<string, string> = {
-      URBAN: "URBAN.NS",
-      URBANCO: "URBAN.NS",
-      URBANCOMPANY: "URBAN.NS",
-      REDINGTON: "REDINGTON.NS",
-      REDINGTONINDIA: "REDINGTON.NS",
-      TATAMOTORS: "TATAMOTORS.NS",
-      TATAMOTOR: "TATAMOTORS.NS",
-      INFY: "INFY.NS",
-      INFOSYS: "INFY.NS",
-      RELIANCE: "RELIANCE.NS",
-      TCS: "TCS.NS",
-      HDFCBANK: "HDFCBANK.NS",
-      ICICIBANK: "ICICIBANK.NS",
-      SBIN: "SBIN.NS",
-      STATEBANKOFINDIA: "SBIN.NS",
-      BHARTIARTL: "BHARTIARTL.NS",
-      AIRTEL: "BHARTIARTL.NS",
-      ITC: "ITC.NS",
-      LT: "LT.NS",
-      LARSEN: "LT.NS",
-      WIPRO: "WIPRO.NS",
-      ZOMATO: "ZOMATO.NS",
-      MARUTI: "MARUTI.NS",
-      BAJFINANCE: "BAJFINANCE.NS",
-      AXISBANK: "AXISBANK.NS",
-      KOTAKBANK: "KOTAKBANK.NS",
-      NIFTY: "^NSEI",
-      NIFTY50: "^NSEI",
-      SENSEX: "^BSESN",
-    };
-    if (indianMap[upperQ]) {
-      yahooSymbol = indianMap[upperQ];
+    } catch (_err) {
+      // Search lookup fallback
     }
   }
 
-  // 2. Fetch 3 months of daily historical bar data from Yahoo Finance Chart API
+  // 2. Fetch 6 months of daily historical bar data from Yahoo Finance Chart API
   let chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     yahooSymbol
-  )}?interval=1d&range=3mo`;
+  )}?interval=1d&range=6mo`;
 
   let chartRes = await fetch(chartUrl, {
     headers: {
@@ -234,12 +233,12 @@ async function fetchLiveYahooStockData(query: string) {
     },
   });
 
-  // If initial attempt fails and ticker has no dot suffix, try adding .NS (NSE India)
+  // If initial attempt fails and ticker has no dot suffix, try adding .NS (NSE India) or .BO (BSE India)
   if (!chartRes.ok && !yahooSymbol.includes(".")) {
     const nseSymbol = `${yahooSymbol}.NS`;
     const nseChartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
       nseSymbol
-    )}?interval=1d&range=3mo`;
+    )}?interval=1d&range=6mo`;
     const nseRes = await fetch(nseChartUrl, {
       headers: {
         "User-Agent":
@@ -252,14 +251,21 @@ async function fetchLiveYahooStockData(query: string) {
     }
   }
 
+  // If chart API is not ok (404, 400, etc.), return null to allow graceful fallback generator
   if (!chartRes.ok) {
-    throw new Error(`Yahoo Finance HTTP ${chartRes.status} for symbol ${yahooSymbol}`);
+    return null;
   }
 
-  const chartData = await chartRes.json();
+  let chartData;
+  try {
+    chartData = await chartRes.json();
+  } catch (_e) {
+    return null;
+  }
+
   const result = chartData.chart?.result?.[0];
   if (!result || !result.timestamp || !result.indicators?.quote?.[0]?.close) {
-    throw new Error(`No chart data returned from Yahoo Finance for ${yahooSymbol}`);
+    return null;
   }
 
   const meta = result.meta || {};
@@ -283,7 +289,7 @@ async function fetchLiveYahooStockData(query: string) {
   }
 
   if (validPoints.length === 0) {
-    throw new Error(`Zero valid price bars found for ${yahooSymbol}`);
+    return null;
   }
 
   // Deduplicate and sort
@@ -318,53 +324,78 @@ function generateFallbackStockData(query: string) {
   const isUS = /USD|APPLE|AAPL|NVIDIA|NVDA|TESLA|TSLA|MICROSOFT|MSFT|AMAZON|AMZN|GOOGLE|GOOGL|BITCOIN|BTC/.test(cleanQuery.toUpperCase());
   
   let symbol = upper.length > 0 ? upper.slice(0, 10) : "STOCK";
+  let companyName = cleanQuery;
   let currency = isUS ? "$" : "₹";
-  let basePrice = 1000;
+  let basePrice = 450;
 
   if (/URBAN|URBANCO|URBANCOMPANY/.test(cleanQuery.toUpperCase())) {
     symbol = "URBANCO";
+    companyName = "Urban Company";
     basePrice = 142.24;
+    currency = "₹";
+  } else if (/MESSO|MEESHO/.test(cleanQuery.toUpperCase())) {
+    symbol = "MEESHO";
+    companyName = "Meesho";
+    basePrice = 210.00;
+    currency = "₹";
+  } else if (/SWIGGY/.test(cleanQuery.toUpperCase())) {
+    symbol = "SWIGGY";
+    companyName = "Swiggy Ltd";
+    basePrice = 412.50;
+    currency = "₹";
+  } else if (/ZEPTO/.test(cleanQuery.toUpperCase())) {
+    symbol = "ZEPTO";
+    companyName = "Zepto";
+    basePrice = 185.00;
     currency = "₹";
   } else if (/REDINGTON/.test(cleanQuery.toUpperCase())) {
     symbol = "REDINGTON";
+    companyName = "Redington Ltd";
     basePrice = 353;
     currency = "₹";
   } else if (/TATA.*MOTOR|TATAMOTORS/.test(cleanQuery.toUpperCase())) {
     symbol = "TATAMOTORS";
+    companyName = "Tata Motors Ltd";
     basePrice = 965;
     currency = "₹";
   } else if (/INFY|INFOSYS/.test(cleanQuery.toUpperCase())) {
     symbol = "INFY";
+    companyName = "Infosys Ltd";
     basePrice = 1840;
     currency = "₹";
   } else if (/RELIANCE/.test(cleanQuery.toUpperCase())) {
     symbol = "RELIANCE";
+    companyName = "Reliance Industries";
     basePrice = 2980;
     currency = "₹";
   } else if (/NVDA|NVIDIA/.test(cleanQuery.toUpperCase())) {
     symbol = "NVDA";
+    companyName = "NVIDIA Corp";
     basePrice = 124;
     currency = "$";
   } else if (/TSLA|TESLA/.test(cleanQuery.toUpperCase())) {
     symbol = "TSLA";
+    companyName = "Tesla Inc";
     basePrice = 215;
     currency = "$";
   } else if (/AAPL|APPLE/.test(cleanQuery.toUpperCase())) {
     symbol = "AAPL";
+    companyName = "Apple Inc";
     basePrice = 222;
     currency = "$";
   } else if (/BTC|BITCOIN/.test(cleanQuery.toUpperCase())) {
     symbol = "BTC";
+    companyName = "Bitcoin";
     basePrice = 64500;
     currency = "$";
   }
 
-  // Generate 18 historical business days
+  // Generate 180 historical business days (6-month series)
   const prices: { date: string; close: number }[] = [];
   const today = new Date();
   let currentPrice = basePrice * 0.92;
 
-  for (let i = 18; i >= 0; i--) {
+  for (let i = 180; i >= 0; i--) {
     const d = new Date(today);
     d.setUTCDate(d.getUTCDate() - i);
     const dayOfWeek = d.getUTCDay();

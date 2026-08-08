@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { StockSearchBar } from "./components/StockSearchBar";
 import { DailyRecommendations } from "./components/DailyRecommendations";
 import { ActiveStockRecommendation } from "./components/ActiveStockRecommendation";
+import { IntradayPredictionCard } from "./components/IntradayPredictionCard";
 import { DataIngestionTab } from "./components/DataIngestionTab";
 import { MetricsCards } from "./components/MetricsCards";
 import { ChartPanel } from "./components/ChartPanel";
@@ -158,7 +159,7 @@ export default function App() {
         const today = new Date();
         let currentPrice = basePrice * 0.92;
 
-        for (let i = 18; i >= 0; i--) {
+        for (let i = 180; i >= 0; i--) {
           const d = new Date(today);
           d.setUTCDate(d.getUTCDate() - i);
           const dayOfWeek = d.getUTCDay();
@@ -602,6 +603,14 @@ export default function App() {
           currentPrice={prediction?.currentPrice || (parsedRows.length > 0 ? parsedRows[parsedRows.length - 1].close : 100)}
           sentimentScore={sentimentData?.score || 65}
           quantTargetPrice={prediction?.nextClose}
+        />
+
+        {/* Intraday Buying & Selling Range Prediction Engine */}
+        <IntradayPredictionCard
+          intraday={prediction?.intradayPrediction}
+          symbol={stockSymbol}
+          currency={activeCurrency}
+          currentPrice={prediction?.currentPrice || 100}
         />
 
         {/* Real-time Price Threshold Prediction Monitor */}
