@@ -17,6 +17,7 @@ import { TwitterSocialFeed } from "./components/TwitterSocialFeed";
 import { AppSuccessDashboard } from "./components/AppSuccessDashboard";
 import { MutualFundSuggestions } from "./components/MutualFundSuggestions";
 import { PdfReportGeneratorModal } from "./components/PdfReportGeneratorModal";
+import { exportToExcel } from "./utils/excelExporter";
 import { STOCK_PRESETS } from "./utils/sampleData";
 import { parseCSV } from "./utils/csvParser";
 import { generatePrediction } from "./utils/quantEngine";
@@ -567,6 +568,12 @@ export default function App() {
     });
   };
 
+  // Export to Excel handler
+  const handleExportExcel = () => {
+    if (!prediction) return;
+    exportToExcel(prediction, stockSymbol, activeCurrency);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white flex flex-col">
       {/* Header */}
@@ -579,6 +586,7 @@ export default function App() {
         notificationCount={toasts.length}
         onScrollToAlerts={handleScrollToAlerts}
         onOpenPdfReportModal={() => setIsPdfModalOpen(true)}
+        onExportExcel={prediction ? handleExportExcel : undefined}
       />
 
       {/* Main Workspace Container */}
@@ -673,7 +681,11 @@ export default function App() {
         {/* Main Grid: Recharts Canvas + Sidebar Parameters */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <ChartPanel prediction={prediction} currency={activeCurrency} />
+            <ChartPanel
+              prediction={prediction}
+              currency={activeCurrency}
+              onExportExcel={prediction ? handleExportExcel : undefined}
+            />
           </div>
 
           <div className="lg:col-span-1">

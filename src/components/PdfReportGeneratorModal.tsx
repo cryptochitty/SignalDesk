@@ -19,6 +19,7 @@ import {
   ArrowDownRight,
   PieChart,
   Sliders,
+  FileSpreadsheet,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -27,6 +28,7 @@ import { SAMPLE_MUTUAL_FUNDS } from "../utils/mutualFundData";
 import { STOCK_PRESETS } from "../utils/sampleData";
 import { parseCSV } from "../utils/csvParser";
 import { generatePrediction } from "../utils/quantEngine";
+import { exportToExcel } from "../utils/excelExporter";
 
 export type ReportCategory = "stock_specific" | "mutual_fund" | "crypto" | "us_stocks" | "indian_stocks";
 
@@ -816,6 +818,21 @@ export const PdfReportGeneratorModal: React.FC<PdfReportGeneratorModalProps> = (
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               Close
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (prediction) {
+                  exportToExcel(prediction, stockSymbol, currency);
+                }
+              }}
+              disabled={!prediction}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-40"
+              title="Download Excel Spreadsheet (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export Excel (.xlsx)</span>
             </button>
 
             <button

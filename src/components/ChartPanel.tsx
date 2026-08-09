@@ -10,15 +10,16 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
-import { Eye, EyeOff, Layers, ZoomIn } from "lucide-react";
+import { Eye, EyeOff, Layers, ZoomIn, FileSpreadsheet } from "lucide-react";
 import { PredictionResult } from "../types";
 
 interface ChartPanelProps {
   prediction: PredictionResult | null;
   currency: string;
+  onExportExcel?: () => void;
 }
 
-export const ChartPanel: React.FC<ChartPanelProps> = ({ prediction, currency }) => {
+export const ChartPanel: React.FC<ChartPanelProps> = ({ prediction, currency, onExportExcel }) => {
   const [showBacktestFit, setShowBacktestFit] = useState(true);
   const [showVolatilityBand, setShowVolatilityBand] = useState(true);
   const [showMaLine, setShowMaLine] = useState(true);
@@ -104,6 +105,17 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({ prediction, currency }) 
             {showMaLine ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
             Moving Average
           </button>
+
+          {onExportExcel && (
+            <button
+              onClick={onExportExcel}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-bold transition-all shadow-sm"
+              title="Export Dataset to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Download Excel</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell, FileText } from "lucide-react";
+import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell, FileText, FileSpreadsheet } from "lucide-react";
 import { StockPreset } from "../types";
 import { STOCK_PRESETS } from "../utils/sampleData";
 
@@ -12,6 +12,7 @@ interface HeaderProps {
   notificationCount?: number;
   onScrollToAlerts?: () => void;
   onOpenPdfReportModal?: () => void;
+  onExportExcel?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   notificationCount = 0,
   onScrollToAlerts,
   onOpenPdfReportModal,
+  onExportExcel,
 }) => {
 
   const [headerQuery, setHeaderQuery] = useState("");
@@ -87,6 +89,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Quick Stock Selector, PDF Report & Notification Bell */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          {/* Excel Export Button */}
+          {onExportExcel && (
+            <button
+              onClick={onExportExcel}
+              className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer shadow-sm group"
+              title="Export Multi-Sheet Excel Report (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400 group-hover:text-white" />
+              <span className="hidden sm:inline">Excel Export</span>
+            </button>
+          )}
+
           {/* PDF Report Download Button */}
           {onOpenPdfReportModal && (
             <button
