@@ -291,15 +291,17 @@ async function fetchLiveYahooStockData(query: string) {
     return null;
   }
 
-  // Deduplicate and sort
+  // Deduplicate and sort chronologically
   const uniqueMap = new Map<string, number>();
   validPoints.forEach((p) => uniqueMap.set(p.date, p.close));
-  const sortedDates = Array.from(uniqueMap.keys()).sort();
+  const sortedDates = Array.from(uniqueMap.keys()).sort((a, b) => a.localeCompare(b));
   const csvData = "Date,Close\n" + sortedDates.map((d) => `${d},${uniqueMap.get(d)}`).join("\n");
 
-  const latestPrice = validPoints[validPoints.length - 1].close;
-  const firstPrice = validPoints[0].close;
-  const priceChangePct = ((latestPrice - firstPrice) / firstPrice) * 100;
+  const firstDate = sortedDates[0];
+  const lastDate = sortedDates[sortedDates.length - 1];
+  const firstPrice = uniqueMap.get(firstDate) || validPoints[0].close;
+  const latestPrice = uniqueMap.get(lastDate) || validPoints[validPoints.length - 1].close;
+  const priceChangePct = ((latestPrice - firstPrice) / (firstPrice || 1)) * 100;
 
   const cleanSymbol = displaySymbol.replace(".NS", "").replace(".BO", "");
 
