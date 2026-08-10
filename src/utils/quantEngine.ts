@@ -510,39 +510,67 @@ export function calculateIntradayPrediction(
     signal = "NEUTRAL HOLD";
   }
 
-  // Intraday Buying Zone
+  // Intraday Buying Zone & Optimal Entry (anchored directly to current share price)
   let buyRangeLow: number;
   let buyRangeHigh: number;
   let buyOptimal: number;
 
+  const currentPrice = prevClose;
+
   if (signal === "STRONG BUY" || signal === "BUY / LONG") {
-    buyRangeLow = Math.min(prevClose, S1);
-    buyRangeHigh = prevClose * (1 - dailyVolPct * 0.15);
-    buyOptimal = (buyRangeLow + buyRangeHigh) / 2;
+    // Actionable Buy Zone centered on current price
+    const lowerOffset = Math.max(0.003, dailyVolPct * 0.25);
+    const upperOffset = Math.max(0.002, dailyVolPct * 0.10);
+
+    buyRangeLow = Math.min(currentPrice * (1 - lowerOffset), Math.max(S1, currentPrice * 0.985));
+    buyRangeHigh = Math.max(currentPrice * (1 + upperOffset), buyRangeLow * 1.004);
+    buyOptimal = currentPrice; // Take optimal entry directly as the current share price
+  } else if (signal === "SELL / SHORT") {
+    buyRangeLow = Math.min(currentPrice * (1 - dailyVolPct * 0.5), S2);
+    buyRangeHigh = currentPrice;
+    buyOptimal = currentPrice;
   } else {
-    buyRangeLow = S2;
-    buyRangeHigh = S1;
-    buyOptimal = S1;
+    // Neutral / Hold
+    buyRangeLow = Math.min(currentPrice * 0.993, S1);
+    buyRangeHigh = Math.max(currentPrice * 1.003, PP);
+    buyOptimal = currentPrice;
   }
 
-  // Intraday Selling Targets
+  // Ensure buyRangeLow <= buyRangeHigh
+  if (buyRangeLow > buyRangeHigh) {
+    const temp = buyRangeLow;
+    buyRangeLow = buyRangeHigh;
+    buyRangeHigh = temp;
+  }
+
+  // Intraday Selling Targets (anchored directly from current share price)
   let sellTarget1: number;
   let sellTarget2: number;
   let sellTarget3: number;
 
   if (signal === "STRONG BUY" || signal === "BUY / LONG") {
-    sellTarget1 = Math.max(prevClose * 1.008, PP);
+    const t1Pct = Math.max(0.008, dailyVolPct * 0.35);
+    sellTarget1 = Math.max(currentPrice * (1 + t1Pct), PP);
     sellTarget2 = Math.max(sellTarget1 * 1.012, R1);
     sellTarget3 = Math.max(sellTarget2 * 1.015, R2);
+  } else if (signal === "SELL / SHORT") {
+    sellTarget1 = currentPrice * (1 - Math.max(0.010, dailyVolPct * 0.4));
+    sellTarget2 = currentPrice * (1 - Math.max(0.022, dailyVolPct * 0.8));
+    sellTarget3 = currentPrice * (1 - Math.max(0.038, dailyVolPct * 1.2));
   } else {
-    sellTarget1 = prevClose * (1 - dailyVolPct * 0.4);
-    sellTarget2 = S1;
-    sellTarget3 = S2;
+    sellTarget1 = Math.max(currentPrice * 1.008, R1);
+    sellTarget2 = Math.max(sellTarget1 * 1.012, R2);
+    sellTarget3 = sellTarget2 * 1.015;
   }
 
-  // Intraday Stop Loss (1:2.8 Risk:Reward ratio)
-  const stopDistance = Math.abs(sellTarget1 - buyOptimal) / 2.8;
-  const stopLoss = buyOptimal - Math.max(prevClose * 0.005, stopDistance);
+  // Intraday Stop Loss (Risk Management anchored to current price)
+  let stopLoss: number;
+  if (signal === "SELL / SHORT") {
+    stopLoss = currentPrice * (1 + Math.max(0.008, dailyVolPct * 0.5));
+  } else {
+    const minRiskDist = currentPrice * Math.max(0.006, dailyVolPct * 0.4);
+    stopLoss = Math.min(buyRangeLow * 0.997, currentPrice - minRiskDist);
+  }
 
   // Expected Intraday High and Low
   const expectedHigh = Math.max(prevHigh, R1, nextClose * (1 + dailyVolPct * 0.4));

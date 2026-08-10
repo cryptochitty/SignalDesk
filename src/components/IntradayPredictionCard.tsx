@@ -78,7 +78,7 @@ export const IntradayPredictionCard: React.FC<IntradayPredictionCardProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Same-day trading bounds, entry range, exit targets & floor pivot points
+              Anchored from Live Current Price: <strong className="text-emerald-400 font-mono">{currency}{formatVal(currentPrice)}</strong> • Same-day trading bounds, entry range, exit targets & floor pivots
             </p>
           </div>
         </div>
