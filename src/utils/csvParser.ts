@@ -1,11 +1,26 @@
 import Papa from "papaparse";
 import { StockDataRow } from "../types";
 
+const MONTH_MAP: Record<string, number> = {
+  jan: 1, january: 1,
+  feb: 2, february: 2,
+  mar: 3, march: 3,
+  apr: 4, april: 4,
+  may: 5,
+  jun: 6, june: 6,
+  jul: 7, july: 7,
+  aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9,
+  oct: 10, october: 10,
+  nov: 11, november: 11,
+  dec: 12, december: 12,
+};
+
 /**
  * Normalizes various date string formats into standard ISO YYYY-MM-DD
  * Returns empty string if the input string is not a valid date.
  */
-export function normalizeDate(dateStr: string): string {
+export function normalizeDate(dateStr: string, preferDayFirst: boolean = true): string {
   if (!dateStr) return "";
   const cleanStr = dateStr.trim();
   if (!cleanStr) return "";
@@ -15,46 +30,84 @@ export function normalizeDate(dateStr: string): string {
     return "";
   }
 
-  // Try YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  // 1. Try YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
   const ymdMatch = cleanStr.match(/^(\d{4})[\/\.\-](\d{1,2})[\/\.\-](\d{1,2})$/);
   if (ymdMatch) {
     const year = parseInt(ymdMatch[1], 10);
     const month = parseInt(ymdMatch[2], 10);
     const day = parseInt(ymdMatch[3], 10);
     if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const pad = (n: number) => String(n).padStart(2, "0");
       return `${year}-${pad(month)}-${pad(day)}`;
     }
   }
 
-  // Try DD-MM-YYYY or MM-DD-YYYY or DD/MM/YYYY
-  const ddmmyyyyMatch = cleanStr.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/);
-  if (ddmmyyyyMatch) {
-    const p1 = parseInt(ddmmyyyyMatch[1], 10);
-    const p2 = parseInt(ddmmyyyyMatch[2], 10);
-    const year = parseInt(ddmmyyyyMatch[3], 10);
+  // 2. Try DD-MMM-YYYY or MMM-DD-YYYY or DD MMM YYYY (e.g. "05-Aug-2026", "05 AUG 2026", "Aug 05, 2026")
+  const alphaMatch =
+    cleanStr.match(/^(\d{1,2})[\/\.\-\s]+([A-Za-z]{3,9})[\/\.\-\s]+(\d{2,4})$/) ||
+    cleanStr.match(/^([A-Za-z]{3,9})[\/\.\-\s]+(\d{1,2}),?[\/\.\-\s]+(\d{2,4})$/);
+  if (alphaMatch) {
+    let day: number, monthStr: string, year: number;
+    if (/^[A-Za-z]/.test(alphaMatch[1])) {
+      monthStr = alphaMatch[1].toLowerCase();
+      day = parseInt(alphaMatch[2], 10);
+      year = parseInt(alphaMatch[3], 10);
+    } else {
+      day = parseInt(alphaMatch[1], 10);
+      monthStr = alphaMatch[2].toLowerCase();
+      year = parseInt(alphaMatch[3], 10);
+    }
+    if (year < 100) year += 2000;
+    const month = MONTH_MAP[monthStr];
+    if (month && year >= 1900 && year <= 2100 && day >= 1 && day <= 31) {
+      return `${year}-${pad(month)}-${pad(day)}`;
+    }
+  }
+
+  // 3. Try numeric DD-MM-YYYY or MM-DD-YYYY (e.g., 05/08/2026, 05-08-2026)
+  const numericMatch = cleanStr.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
+  if (numericMatch) {
+    const p1 = parseInt(numericMatch[1], 10);
+    const p2 = parseInt(numericMatch[2], 10);
+    let year = parseInt(numericMatch[3], 10);
+    if (year < 100) year += 2000;
 
     if (year >= 1900 && year <= 2100) {
-      let month = p1 <= 12 ? p1 : p2;
-      let day = p1 <= 12 ? p2 : p1;
-      if (p2 > 12) {
-        day = p2;
+      let month: number;
+      let day: number;
+
+      if (p1 > 12 && p2 <= 12) {
+        day = p1;
+        month = p2;
+      } else if (p2 > 12 && p1 <= 12) {
         month = p1;
+        day = p2;
+      } else if (p1 <= 12 && p2 <= 12) {
+        if (preferDayFirst) {
+          day = p1;
+          month = p2;
+        } else {
+          month = p1;
+          day = p2;
+        }
+      } else {
+        return "";
       }
+
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        const pad = (n: number) => String(n).padStart(2, "0");
         return `${year}-${pad(month)}-${pad(day)}`;
       }
     }
   }
 
-  // Fallback to JS Date parsing for strings like "Aug 5, 2026", "2026-Aug-05"
+  // 4. Fallback to JS Date parsing for strings like "August 5, 2026"
   const parsed = new Date(cleanStr);
   if (!isNaN(parsed.getTime())) {
     const year = parsed.getUTCFullYear();
     if (year >= 1900 && year <= 2100) {
-      const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(parsed.getUTCDate()).padStart(2, "0");
+      const month = pad(parsed.getUTCMonth() + 1);
+      const day = pad(parsed.getUTCDate());
       return `${year}-${month}-${day}`;
     }
   }
@@ -256,6 +309,30 @@ export function parseCSV(rawText: string): { rows: StockDataRow[]; detectedCurre
     closeColIdx = inferred.closeColIdx;
   }
 
+  // Determine if dates in this dataset prefer Day First (DD/MM/YYYY vs MM/DD/YYYY)
+  let preferDayFirst = detectedCurrency === "₹" || /nse|bse|zerodha|kite|groww|inr/i.test(rawText);
+  let p1Max = 0;
+  let p2Max = 0;
+
+  for (let i = startIdx; i < Math.min(rawRows.length, startIdx + 100); i++) {
+    const row = rawRows[i];
+    if (!row) continue;
+    const dStr = String(Array.isArray(row) ? row[dateColIdx] : "").trim();
+    const match = dStr.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
+    if (match) {
+      const p1 = parseInt(match[1], 10);
+      const p2 = parseInt(match[2], 10);
+      if (p1 > p1Max) p1Max = p1;
+      if (p2 > p2Max) p2Max = p2;
+    }
+  }
+
+  if (p1Max > 12) {
+    preferDayFirst = true;
+  } else if (p2Max > 12) {
+    preferDayFirst = false;
+  }
+
   const resultRows: StockDataRow[] = [];
 
   for (let i = startIdx; i < rawRows.length; i++) {
@@ -270,10 +347,10 @@ export function parseCSV(rawText: string): { rows: StockDataRow[]; detectedCurre
         const parts = row[0].trim().split(/[\s,;\t]+/);
         if (parts.length >= 2) {
           for (const p of parts) {
-            const normD = normalizeDate(p);
+            const normD = normalizeDate(p, preferDayFirst);
             if (normD && !dateVal) dateVal = normD;
             const normN = cleanNumber(p);
-            if (normN !== null && normN > 0 && closeVal === null && !normalizeDate(p)) {
+            if (normN !== null && normN > 0 && closeVal === null && !normalizeDate(p, preferDayFirst)) {
               closeVal = normN;
             }
           }
@@ -291,7 +368,7 @@ export function parseCSV(rawText: string): { rows: StockDataRow[]; detectedCurre
       closeVal = cleanNumber(row[closeKey]);
     }
 
-    const isoDate = normalizeDate(dateVal);
+    const isoDate = normalizeDate(dateVal, preferDayFirst);
     if (isoDate && closeVal !== null && !isNaN(closeVal) && closeVal > 0) {
       resultRows.push({
         date: isoDate,

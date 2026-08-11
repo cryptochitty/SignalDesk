@@ -665,7 +665,7 @@ Provide:
 
     // 3.5-second hard timeout race for maximum speed
     const geminiPromise = ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: promptText,
       config: {
         responseMimeType: "application/json",
