@@ -879,6 +879,11 @@ app.post("/api/market-summary", async (req, res) => {
     momentumPrediction,
     maePercentage,
     sentimentScore,
+    supertrend,
+    wilderRsi,
+    probeLevel,
+    addLevel,
+    invalidationLevel,
     currency = "₹",
   } = req.body;
 
@@ -892,11 +897,14 @@ app.post("/api/market-summary", async (req, res) => {
 - Momentum Vector Prediction: ${currency}${momentumPrediction}
 - Historical Model Backtest Error (MAE): ${maePercentage}%
 - Social Sentiment Index: ${sentimentScore !== undefined ? sentimentScore : "N/A"}/100
+${supertrend ? `- Weekly Supertrend (ATR 10, Factor 2.25): ${supertrend.direction} (Trailing: ${currency}${supertrend.value})` : ""}
+${wilderRsi ? `- Weekly Wilder RSI (14): ${wilderRsi.value} (${wilderRsi.condition})` : ""}
+${probeLevel ? `- Action Levels: Probe Midpoint: ${currency}${probeLevel} | Add Breakout: ${currency}${addLevel} | Invalidation: ${currency}${invalidationLevel}` : ""}
 
 Format as 3 sharp, professional bullet points highlighting:
-1. Technical trend & momentum convergence.
-2. Backtest statistical model reliability.
-3. Market posture and risk management levels.`;
+1. Technical trend, weekly Supertrend & Wilder RSI momentum.
+2. Backtest statistical model reliability & composite rating.
+3. Tactical execution protocol: Probe entry, Add breakout, and Invalidation stop-loss.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
@@ -909,8 +917,11 @@ Format as 3 sharp, professional bullet points highlighting:
     res.json({ summary: response.text || "Quantitative models show stable statistical convergence across indicators." });
   } catch (_err) {
     const direction = (predictedPrice || 0) >= (currentPrice || 0) ? "bullish" : "defensive";
+    const actionStr = probeLevel
+      ? `\n• **Execution Protocol**: Probe test zone at ${currency}${probeLevel}, Add scale-in trigger at ${currency}${addLevel}, hard structural Invalidation at ${currency}${invalidationLevel}.`
+      : `\n• **Risk Management**: Maintain disciplined stop-loss risk boundaries below ${currency}${((currentPrice || 0) * 0.95).toFixed(2)}.`;
     res.json({
-      summary: `• **Model Convergence**: Ensemble models project a target near ${currency}${predictedPrice} reflecting a ${direction} technical bias.\n• **Backtest Reliability**: Walk-forward historical testing demonstrates a low mean absolute error of ${maePercentage}%.\n• **Risk Management**: Maintain disciplined stop-loss risk boundaries below ${currency}${((currentPrice || 0) * 0.95).toFixed(2)}.`,
+      summary: `• **Model Convergence**: Ensemble models project a target near ${currency}${predictedPrice} reflecting a ${direction} technical bias.\n• **Backtest Reliability**: Walk-forward historical testing demonstrates a low mean absolute error of ${maePercentage}%.${actionStr}`,
     });
   }
 });

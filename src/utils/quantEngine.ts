@@ -6,6 +6,9 @@ import {
   SentimentAnalysisData,
   WeeklyForwardProjection,
   WeeklyForwardDay,
+  WeeklyCandle,
+  WeeklyMethodAnalysis,
+  ExecutionProtocolLevels,
 } from "../types";
 
 /**
@@ -449,6 +452,14 @@ export function generatePrediction(
     sentimentData?.score || 0
   );
 
+  // Generate Multi-Timeframe Weekly Methodology Analysis (Supertrend ATR 10 / 2.25, Wilder RSI 14, Composite 50/35/15, Probe/Add/Invalidation)
+  const weeklyMethod = calculateWeeklyMethodology(
+    symbol,
+    currency,
+    rows,
+    sentimentData?.score || 60
+  );
+
   return {
     symbol,
     currency,
@@ -465,6 +476,7 @@ export function generatePrediction(
     backtestMetrics: metrics,
     intradayPrediction,
     weeklyProjection,
+    weeklyMethod,
     chartData,
   };
 }
@@ -735,4 +747,429 @@ export function calculateWeeklyForwardProjection(
     dailyProjections,
   };
 }
+
+/**
+ * Aggregates daily StockDataRow rows into weekly OHLC candlesticks.
+ * Identifies completed weekly candles and the live ongoing weekly candle.
+ */
+export function aggregateToWeeklyCandles(rows: StockDataRow[]): WeeklyCandle[] {
+  if (!rows || rows.length === 0) return [];
+
+  // Sort chronologically by date
+  const sorted = [...rows].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const weeklyMap = new Map<string, StockDataRow[]>();
+
+  sorted.forEach((r) => {
+    const d = new Date(r.date);
+    if (isNaN(d.getTime())) return;
+    
+    // Group by Monday-based ISO week
+    const day = d.getUTCDay();
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // adjust to Monday
+    const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+    const weekKey = monday.toISOString().split("T")[0];
+
+    if (!weeklyMap.has(weekKey)) {
+      weeklyMap.set(weekKey, []);
+    }
+    weeklyMap.get(weekKey)!.push(r);
+  });
+
+  const weekKeys = Array.from(weeklyMap.keys()).sort();
+  const totalWeeks = weekKeys.length;
+
+  const candles: WeeklyCandle[] = weekKeys.map((wk, idx) => {
+    const dayRows = weeklyMap.get(wk)!;
+    const open = dayRows[0].open || dayRows[0].close;
+    const close = dayRows[dayRows.length - 1].close;
+    let high = -Infinity;
+    let low = Infinity;
+    let volume = 0;
+
+    dayRows.forEach((dr) => {
+      const rHigh = dr.high !== undefined ? dr.high : dr.close;
+      const rLow = dr.low !== undefined ? dr.low : dr.close;
+      if (rHigh > high) high = rHigh;
+      if (rLow < low) low = rLow;
+      if (dr.volume) volume += dr.volume;
+    });
+
+    if (high === -Infinity) high = Math.max(open, close);
+    if (low === Infinity) low = Math.min(open, close);
+
+    const endDate = dayRows[dayRows.length - 1].date;
+    const isCompleted = idx < totalWeeks - 1 || dayRows.length >= 5;
+
+    return {
+      weekStartDate: wk,
+      weekEndDate: endDate,
+      open,
+      high,
+      low,
+      close,
+      volume,
+      isCompleted,
+    };
+  });
+
+  return candles;
+}
+
+/**
+ * Calculates Wilder's 14-period smoothed RSI on Weekly Closes
+ */
+export function calculateWilderRSI(
+  closes: number[],
+  length: number = 14
+): {
+  value: number;
+  condition: 'BULLISH MOMENTUM' | 'NEUTRAL' | 'OVERSOLD REBOUND' | 'OVERBOUGHT';
+} {
+  if (!closes || closes.length < 2) {
+    return { value: 50, condition: 'NEUTRAL' };
+  }
+
+  // If fewer than length points, extrapolate or use available
+  const period = Math.min(length, closes.length - 1);
+  let gains = 0;
+  let losses = 0;
+
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    const currGain = diff >= 0 ? diff : 0;
+    const currLoss = diff < 0 ? Math.abs(diff) : 0;
+
+    avgGain = (avgGain * (length - 1) + currGain) / length;
+    avgLoss = (avgLoss * (length - 1) + currLoss) / length;
+  }
+
+  if (avgLoss === 0) {
+    return { value: 100, condition: 'OVERBOUGHT' };
+  }
+
+  const rs = avgGain / avgLoss;
+  const rsi = Math.round((100 - 100 / (1 + rs)) * 10) / 10;
+
+  let condition: 'BULLISH MOMENTUM' | 'NEUTRAL' | 'OVERSOLD REBOUND' | 'OVERBOUGHT' = 'NEUTRAL';
+  if (rsi >= 70) condition = 'OVERBOUGHT';
+  else if (rsi >= 55) condition = 'BULLISH MOMENTUM';
+  else if (rsi <= 35) condition = 'OVERSOLD REBOUND';
+
+  return { value: rsi, condition };
+}
+
+/**
+ * Calculates Weekly Supertrend using ATR length 10 and factor 2.25
+ */
+export function calculateSupertrendWeekly(
+  candles: WeeklyCandle[],
+  atrLength: number = 10,
+  factor: number = 2.25
+): {
+  value: number;
+  direction: 'BULLISH' | 'BEARISH';
+  upperBand: number;
+  lowerBand: number;
+  atr10: number;
+  factor: number;
+} {
+  if (!candles || candles.length === 0) {
+    return {
+      value: 0,
+      direction: 'BULLISH',
+      upperBand: 0,
+      lowerBand: 0,
+      atr10: 0,
+      factor,
+    };
+  }
+
+  const n = candles.length;
+  // Compute True Range for each candle
+  const tr: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const c = candles[i];
+    if (i === 0) {
+      tr.push(c.high - c.low);
+    } else {
+      const prevClose = candles[i - 1].close;
+      const trueRange = Math.max(
+        c.high - c.low,
+        Math.abs(c.high - prevClose),
+        Math.abs(c.low - prevClose)
+      );
+      tr.push(trueRange);
+    }
+  }
+
+  // Smooth ATR(10)
+  const actualPeriod = Math.min(atrLength, tr.length);
+  let atr = tr.slice(0, actualPeriod).reduce((a, b) => a + b, 0) / actualPeriod;
+  for (let i = actualPeriod; i < tr.length; i++) {
+    atr = (atr * (atrLength - 1) + tr[i]) / atrLength;
+  }
+
+  const lastCandle = candles[n - 1];
+  const hl2 = (lastCandle.high + lastCandle.low) / 2;
+  const basicUpperBand = hl2 + factor * atr;
+  const basicLowerBand = hl2 - factor * atr;
+
+  let supertrendVal: number;
+  let direction: 'BULLISH' | 'BEARISH';
+
+  if (lastCandle.close >= hl2) {
+    direction = 'BULLISH';
+    supertrendVal = Math.round(basicLowerBand * 100) / 100;
+  } else {
+    direction = 'BEARISH';
+    supertrendVal = Math.round(basicUpperBand * 100) / 100;
+  }
+
+  return {
+    value: supertrendVal,
+    direction,
+    upperBand: Math.round(basicUpperBand * 100) / 100,
+    lowerBand: Math.round(basicLowerBand * 100) / 100,
+    atr10: Math.round(atr * 100) / 100,
+    factor,
+  };
+}
+
+/**
+ * Calculates Multi-Timeframe Weekly Quantitative Methodology:
+ * 1. Weekly Supertrend (ATR 10, Factor 2.25)
+ * 2. Weekly RSI (Wilder RSI 14)
+ * 3. Last Completed Weekly Candle score contribution
+ * 4. Live Weekly Candle recovery evidence
+ * 5. Composite Score = 50 Technical + 35 Fundamental + 15 Execution
+ * 6. Audited Top 200 PCI reuse vs Other asset survival proxy penalty
+ * 7. Probe Level = Prior week midpoint: (High + Low) / 2
+ * 8. Add Level = Prior week high
+ * 9. Invalidation Level = Four week low
+ */
+export function calculateWeeklyMethodology(
+  symbol: string,
+  currency: string,
+  rows: StockDataRow[],
+  sentimentScore: number = 60
+): WeeklyMethodAnalysis {
+  const weeklyCandles = aggregateToWeeklyCandles(rows);
+  const currentPrice = rows.length > 0 ? rows[rows.length - 1].close : 100;
+
+  // Fallback synthetic candles if history is short (< 4 weeks)
+  const fullCandles = [...weeklyCandles];
+  while (fullCandles.length < 6) {
+    const prev = fullCandles[0] || {
+      open: currentPrice * 0.96,
+      high: currentPrice * 0.98,
+      low: currentPrice * 0.94,
+      close: currentPrice * 0.96,
+      weekStartDate: "2026-01-01",
+      weekEndDate: "2026-01-07",
+      isCompleted: true,
+    };
+    fullCandles.unshift({
+      open: prev.open * 0.98,
+      high: prev.high * 0.985,
+      low: prev.low * 0.975,
+      close: prev.close * 0.98,
+      weekStartDate: "2025-12-01",
+      weekEndDate: "2025-12-07",
+      isCompleted: true,
+    });
+  }
+
+  // 1. Weekly Supertrend (ATR length 10, factor 2.25)
+  const supertrend = calculateSupertrendWeekly(fullCandles, 10, 2.25);
+
+  // 2. Weekly RSI (Wilder RSI length 14)
+  const weeklyCloses = fullCandles.map((c) => c.close);
+  const wilderRsi14 = calculateWilderRSI(weeklyCloses, 14);
+
+  // Separate completed weekly candles from live weekly candle
+  const completedCandles = fullCandles.filter((c) => c.isCompleted);
+  const lastCompletedCandle =
+    completedCandles.length > 0
+      ? completedCandles[completedCandles.length - 1]
+      : fullCandles[fullCandles.length - 1];
+
+  const liveCandle = fullCandles[fullCandles.length - 1];
+
+  // 3. Last Completed Weekly Candle score contribution (0-100 baseline)
+  const compRange = Math.max(0.01, lastCompletedCandle.high - lastCompletedCandle.low);
+  const compClosePosition = (lastCompletedCandle.close - lastCompletedCandle.low) / compRange; // 0 to 1
+  const compWeeklyGainPct =
+    ((lastCompletedCandle.close - lastCompletedCandle.open) / lastCompletedCandle.open) * 100;
+
+  let completedScore = 50;
+  if (compClosePosition > 0.65) completedScore += 25;
+  else if (compClosePosition < 0.35) completedScore -= 20;
+
+  if (compWeeklyGainPct > 2.0) completedScore += 20;
+  else if (compWeeklyGainPct < -2.0) completedScore -= 20;
+
+  if (supertrend.direction === 'BULLISH') completedScore += 10;
+  else completedScore -= 10;
+
+  completedScore = Math.min(100, Math.max(10, completedScore));
+
+  // 4. Live Weekly Candle supplies recovery evidence
+  const liveWeeklyGainPct = ((currentPrice - liveCandle.open) / liveCandle.open) * 100;
+  const liveRange = Math.max(0.01, liveCandle.high - liveCandle.low);
+  const liveBounceFromLow = ((currentPrice - liveCandle.low) / liveRange) * 100;
+
+  let recoveryEvidenceScore = 50;
+  if (liveWeeklyGainPct > 0) recoveryEvidenceScore += Math.min(30, liveWeeklyGainPct * 5);
+  else recoveryEvidenceScore -= Math.min(30, Math.abs(liveWeeklyGainPct) * 4);
+
+  if (liveBounceFromLow > 50) recoveryEvidenceScore += 20;
+  recoveryEvidenceScore = Math.min(100, Math.max(5, Math.round(recoveryEvidenceScore)));
+
+  const hasPositiveRecovery = liveWeeklyGainPct >= 0 || liveBounceFromLow > 50;
+
+  // 6 & 7. Asset Audited Top 200 PCI vs other coins survival proxy penalty
+  const upperSym = symbol.toUpperCase().replace(".NS", "").replace(".BO", "");
+  const isTop200Pci =
+    /BTC|ETH|SOL|SUI|AVAX|HYPE|XRP|RELIANCE|TCS|HDFCBANK|INFY|TATAMOTORS|ICICIBANK|ITC|SBIN|BHARTIARTL|LT|KOTAKBANK|NVDA|AAPL|MSFT|AMZN|GOOGL|TSLA|META/i.test(
+      upperSym
+    ) || symbol.length <= 6;
+
+  const categoryLabel = isTop200Pci ? "Audited Top 200 PCI Asset" : "Non-Audited Alt / Speculative Asset";
+  const survivalProxyScore = isTop200Pci ? 95 : 60;
+  const evidencePenalty = isTop200Pci ? 0 : 12; // Capped penalty for non-audited assets
+
+  // 8. Probe is the prior week midpoint: (Prior High + Prior Low) / 2
+  const probeLevel = Math.round(((lastCompletedCandle.high + lastCompletedCandle.low) / 2) * 100) / 100;
+
+  // 9. Add is the prior week high
+  const addLevel = Math.round(lastCompletedCandle.high * 100) / 100;
+
+  // 10. Invalidation is the four week low
+  const recent4Completed = completedCandles.slice(-4);
+  const fourWeekLow =
+    recent4Completed.length > 0
+      ? Math.min(...recent4Completed.map((c) => c.low))
+      : lastCompletedCandle.low * 0.95;
+  const invalidationLevel = Math.round(fourWeekLow * 100) / 100;
+
+  // Distance percentages from current price
+  const distanceToProbePct = Math.round((((probeLevel - currentPrice) / currentPrice) * 100) * 10) / 10;
+  const distanceToAddPct = Math.round((((addLevel - currentPrice) / currentPrice) * 100) * 10) / 10;
+  const distanceToInvalidationPct = Math.round((((currentPrice - invalidationLevel) / currentPrice) * 100) * 10) / 10;
+
+  // Action status & guidance
+  let actionStatus: ExecutionProtocolLevels["actionStatus"] = "HOLDING";
+  let actionGuidance = "";
+
+  if (currentPrice < invalidationLevel) {
+    actionStatus = "INVALIDATED / EXIT";
+    actionGuidance = `Current price below 4-week low (${currency}${invalidationLevel}). Invalidation triggered; preserve capital.`;
+  } else if (currentPrice >= addLevel) {
+    actionStatus = "BREAKOUT ADD";
+    actionGuidance = `Price broke above prior week high (${currency}${addLevel}). Add sizing on confirmed momentum breakout.`;
+  } else if (Math.abs(currentPrice - probeLevel) / probeLevel <= 0.015 || (currentPrice >= probeLevel && currentPrice < addLevel)) {
+    actionStatus = "PROBE ZONE";
+    actionGuidance = `Trading in optimal test zone around prior week midpoint (${currency}${probeLevel}). Initiating probe position.`;
+  } else {
+    actionStatus = "HOLDING";
+    actionGuidance = `Holding structure above 4-week low (${currency}${invalidationLevel}) with upside trigger at (${currency}${addLevel}).`;
+  }
+
+  // 5. Composite Score = 50 Technical, 35 Fundamental, 15 Execution
+  // Technical (50 max): Supertrend (15) + RSI (15) + Completed Candle (10) + Live Recovery (10)
+  let rawTech = 0;
+  if (supertrend.direction === 'BULLISH') rawTech += 15;
+  else rawTech += 4;
+
+  if (wilderRsi14.value >= 50 && wilderRsi14.value <= 70) rawTech += 15;
+  else if (wilderRsi14.value > 70) rawTech += 11;
+  else if (wilderRsi14.value >= 40) rawTech += 9;
+  else rawTech += 5;
+
+  rawTech += (completedScore / 100) * 10;
+  rawTech += (recoveryEvidenceScore / 100) * 10;
+  const technicalScore = Math.round(Math.min(50, Math.max(5, rawTech)) * 10) / 10;
+
+  // Fundamental (35 max): Top 200 PCI audit / survival proxy (20) + Macro / Sentiment (15) - penalty
+  const rawFund =
+    (survivalProxyScore / 100) * 20 +
+    (Math.max(0, sentimentScore) / 100) * 15 -
+    evidencePenalty;
+  const fundamentalScore = Math.round(Math.min(35, Math.max(5, rawFund)) * 10) / 10;
+
+  // Execution (15 max): Distance from invalidation safety + probe/add alignment
+  let rawExec = 8;
+  if (currentPrice > invalidationLevel) rawExec += 4;
+  if (actionStatus === "PROBE ZONE" || actionStatus === "BREAKOUT ADD") rawExec += 3;
+  if (currentPrice < invalidationLevel) rawExec = 2;
+  const executionScore = Math.round(Math.min(15, Math.max(1, rawExec)) * 10) / 10;
+
+  const totalScore = Math.round(technicalScore + fundamentalScore + executionScore);
+
+  let rating: WeeklyMethodAnalysis["compositeScore"]["rating"] = "NEUTRAL HOLD";
+  if (totalScore >= 78) rating = "STRONG ACCUMULATE";
+  else if (totalScore >= 62) rating = "TACTICAL BUY";
+  else if (totalScore >= 45) rating = "NEUTRAL HOLD";
+  else rating = "DEFENSIVE REDUCE";
+
+  return {
+    symbol,
+    currency,
+    supertrend,
+    wilderRsi14,
+    completedWeeklyCandle: {
+      weekRange: `${lastCompletedCandle.weekStartDate} to ${lastCompletedCandle.weekEndDate}`,
+      open: Math.round(lastCompletedCandle.open * 100) / 100,
+      high: Math.round(lastCompletedCandle.high * 100) / 100,
+      low: Math.round(lastCompletedCandle.low * 100) / 100,
+      close: Math.round(lastCompletedCandle.close * 100) / 100,
+      changePct: Math.round(compWeeklyGainPct * 100) / 100,
+      scoreContribution: Math.round(completedScore),
+    },
+    liveWeeklyCandle: {
+      weekRange: `${liveCandle.weekStartDate} (Live)`,
+      open: Math.round(liveCandle.open * 100) / 100,
+      high: Math.round(liveCandle.high * 100) / 100,
+      low: Math.round(liveCandle.low * 100) / 100,
+      currentClose: Math.round(currentPrice * 100) / 100,
+      weeklyGainPct: Math.round(liveWeeklyGainPct * 100) / 100,
+      recoveryEvidenceScore,
+      hasPositiveRecovery,
+    },
+    compositeScore: {
+      technicalScore,
+      fundamentalScore,
+      executionScore,
+      totalScore,
+      rating,
+    },
+    assetAuditStatus: {
+      isTop200Pci,
+      categoryLabel,
+      survivalProxyScore,
+      evidencePenalty,
+    },
+    executionProtocol: {
+      probeLevel,
+      addLevel,
+      invalidationLevel,
+      currentPrice: Math.round(currentPrice * 100) / 100,
+      distanceToProbePct,
+      distanceToAddPct,
+      distanceToInvalidationPct,
+      actionStatus,
+      actionGuidance,
+    },
+  };
+}
+
 

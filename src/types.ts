@@ -105,6 +105,79 @@ export interface WeeklyForwardProjection {
   dailyProjections: WeeklyForwardDay[];
 }
 
+export interface WeeklyCandle {
+  weekStartDate: string;
+  weekEndDate: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+  isCompleted: boolean;
+}
+
+export interface ExecutionProtocolLevels {
+  probeLevel: number;             // Prior week midpoint: (High + Low) / 2
+  addLevel: number;               // Prior week high
+  invalidationLevel: number;      // 4-week low
+  currentPrice: number;
+  distanceToProbePct: number;     // % from current to probe
+  distanceToAddPct: number;       // % from current to add
+  distanceToInvalidationPct: number; // % from current to invalidation
+  actionStatus: 'PROBE ZONE' | 'BREAKOUT ADD' | 'HOLDING' | 'INVALIDATED / EXIT' | 'ABOVE ADD LEVEL';
+  actionGuidance: string;
+}
+
+export interface WeeklyMethodAnalysis {
+  symbol: string;
+  currency: string;
+  supertrend: {
+    value: number;
+    direction: 'BULLISH' | 'BEARISH';
+    upperBand: number;
+    lowerBand: number;
+    atr10: number;
+    factor: number; // 2.25
+  };
+  wilderRsi14: {
+    value: number;
+    condition: 'BULLISH MOMENTUM' | 'NEUTRAL' | 'OVERSOLD REBOUND' | 'OVERBOUGHT';
+  };
+  completedWeeklyCandle: {
+    weekRange: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    changePct: number;
+    scoreContribution: number; // 0-100 score driving baseline
+  };
+  liveWeeklyCandle: {
+    weekRange: string;
+    open: number;
+    high: number;
+    low: number;
+    currentClose: number;
+    weeklyGainPct: number;
+    recoveryEvidenceScore: number; // 0-100 recovery evidence
+    hasPositiveRecovery: boolean;
+  };
+  compositeScore: {
+    technicalScore: number;    // 50% weight (0 - 50 max)
+    fundamentalScore: number;  // 35% weight (0 - 35 max)
+    executionScore: number;    // 15% weight (0 - 15 max)
+    totalScore: number;        // 0 - 100 sum
+    rating: 'STRONG ACCUMULATE' | 'TACTICAL BUY' | 'NEUTRAL HOLD' | 'DEFENSIVE REDUCE';
+  };
+  assetAuditStatus: {
+    isTop200Pci: boolean;
+    categoryLabel: string;
+    survivalProxyScore: number;
+    evidencePenalty: number;
+  };
+  executionProtocol: ExecutionProtocolLevels;
+}
+
 export interface PredictionResult {
   symbol: string;
   currency: string;
@@ -121,6 +194,7 @@ export interface PredictionResult {
   backtestMetrics: BacktestMetrics;
   intradayPrediction?: IntradayPrediction;
   weeklyProjection?: WeeklyForwardProjection;
+  weeklyMethod?: WeeklyMethodAnalysis;
   chartData: Array<{
     date: string;
     actualClose?: number;
