@@ -1,6 +1,6 @@
 {
   "name": "Signal Desk",
-  "description": "Quantitative stock prediction & backtesting platform with multi-modal ingestion (CSV, URL, OCR, Social Media Sentiment) and ensemble forecasting.",
+  "description": "Personal AI agent for NSE trading, commodities & 24/7 cryptos: sees hidden divergences, deploys strategies in seconds, locks gains and protects downside, and learns from every trade.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

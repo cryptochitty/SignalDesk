@@ -105,6 +105,36 @@ export interface WeeklyForwardProjection {
   dailyProjections: WeeklyForwardDay[];
 }
 
+export interface MonthlyForwardWeek {
+  weekNumber: number;       // 1 to 4
+  weekLabel: string;        // e.g., "Week 1 (Aug 21 - Aug 28)"
+  startDate: string;
+  endDate: string;
+  predictedClose: number;
+  expectedLow: number;
+  expectedHigh: number;
+  weeklyChangePct: number;
+  cumulativeChangePct: number;
+  trendSignal: 'STRONG BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  keyCatalyst: string;
+}
+
+export interface MonthlyForwardProjection {
+  symbol: string;
+  currency: string;
+  startPrice: number;
+  endOfMonthTarget: number;
+  monthlyChangePct: number;
+  monthlyLow: number;
+  monthlyHigh: number;
+  monthlyBias: 'STRONG EXPANSION' | 'BULLISH CONTINUATION' | 'MODERATE CONSOLIDATION' | 'BEARISH RETRACEMENT';
+  monthlyConfidence: number;
+  supportLevel: number;
+  resistanceLevel: number;
+  macroDriver: string;
+  weeklyBreakdowns: MonthlyForwardWeek[];
+}
+
 export interface WeeklyCandle {
   weekStartDate: string;
   weekEndDate: string;
@@ -194,6 +224,7 @@ export interface PredictionResult {
   backtestMetrics: BacktestMetrics;
   intradayPrediction?: IntradayPrediction;
   weeklyProjection?: WeeklyForwardProjection;
+  monthlyProjection?: MonthlyForwardProjection;
   weeklyMethod?: WeeklyMethodAnalysis;
   chartData: Array<{
     date: string;
@@ -291,5 +322,251 @@ export interface MutualFundSuggestion {
   currency: string;
   minSipAmount: number;
   dividendFrequency: 'Quarterly' | 'Monthly' | 'Annually';
+}
+
+export interface DataSourceHealth {
+  id: string;
+  name: string;
+  type: 'Exchange Match Engine' | 'Global Market Stream' | 'DEX Tick Engine' | 'Multi-Node Cluster' | 'Consensus Validator';
+  status: 'ONLINE' | 'SYNCHRONIZED' | 'BACKUP_STANDBY';
+  latencyMs: number;
+  uptimePct: number;
+  coverage: string;
+  lastPing: string;
+  accuracyRating: string;
+}
+
+export interface MultiSourceQuoteDetail {
+  sourceName: string;
+  price: number;
+  timestamp: string;
+  status: 'VERIFIED' | 'SYNCHRONIZED' | 'BACKTEST_ALIGNED';
+  deviationPct: number;
+}
+
+export interface KiteSyncDetail {
+  isSynced: boolean;
+  instrumentToken: string;
+  tradingSymbol: string;
+  exchange: 'NSE' | 'BSE' | 'NFO' | 'CDS' | 'MCX' | 'NASDAQ' | 'GLOBAL';
+  ltp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  lastTickTime: string;
+  tickStatus: 'ACTIVE_LTP_STREAM' | 'CALIBRATED_TICK' | 'QUORUM_VERIFIED';
+  spread: number;
+  depthBid?: number;
+  depthAsk?: number;
+  tickLatencyMs?: number;
+}
+
+export interface MarketMover {
+  symbol: string;
+  displaySymbol: string;
+  name: string;
+  currency: string;
+  exchange: 'NSE' | 'BSE' | 'NASDAQ' | 'Hyperliquid' | 'MCX' | 'GLOBAL';
+  category: 'NSE India' | 'US Tech' | 'Crypto' | 'Commodities';
+  price: number;
+  prevClose: number;
+  change: number;
+  changePct: number;
+  high: number;
+  low: number;
+  volume: number;
+  volumeFormatted: string;
+  turnoverCr?: number;
+  kiteToken?: string;
+  sentimentScore: number;
+  intradaySignal: 'STRONG BUY' | 'BUY' | 'ACCUMULATE' | 'SELL' | 'NEUTRAL';
+  trendDirection: 'UP' | 'DOWN' | 'FLAT';
+  keyCatalyst: string;
+}
+
+export interface TopGainersLosersData {
+  lastUpdated: string;
+  gainers: MarketMover[];
+  losers: MarketMover[];
+  mostActive: MarketMover[];
+  advanceCount: number;
+  declineCount: number;
+  unchangedCount: number;
+  marketBreadthPct: number;
+  averageGainerPct: number;
+  averageLoserPct: number;
+}
+
+export interface AccuracyQuote {
+  symbol: string;
+  displaySymbol: string;
+  companyName: string;
+  currency: string;
+  livePrice: number;
+  previousClose: number;
+  change: number;
+  changePct: number;
+  exchange: string;
+  source: string;
+  secondarySource?: string;
+  consensusSourcesCount?: number;
+  quorumAgreementPct?: number;
+  multiSources?: MultiSourceQuoteDetail[];
+  kiteSync?: KiteSyncDetail;
+  latencyMs?: number;
+  lastCheckedTime: string;
+  dataAgeSeconds: number;
+  isAccurate: boolean;
+  accuracyScore: number; // 0 to 100%
+  dayHigh?: number;
+  dayLow?: number;
+  volume?: number;
+  bidPrice?: number;
+  askPrice?: number;
+  status: 'VERIFIED_LTP' | 'MATCH_CONFIRMED' | 'CALIBRATED' | 'MULTI_SOURCE_CONSENSUS';
+}
+
+export interface AccuracyCheckConfig {
+  autoCheckEnabled: boolean;
+  checkIntervalSeconds: number; // e.g. 10, 15, 30, 60
+  lastGlobalCheckTimestamp: number;
+}
+
+export interface NseTradingStrategy {
+  id: string;
+  name: string;
+  category: 'Trend Following' | 'Breakout & Range' | 'Intraday Scalp' | 'Mean Reversion' | 'AI Custom Prompt';
+  description: string;
+  accuracyRate: number; // e.g. 84.5 (%)
+  winRate: number;      // e.g. 78.2 (%)
+  profitFactor: number; // e.g. 2.65
+  avgRiskReward: string; // e.g. "1 : 2.8"
+  timeframe: string;    // e.g. "15m Intraday", "1D Swing", "Weekly Positional"
+  primaryIndicators: string[];
+  rules: {
+    entry: string;
+    addPosition: string;
+    stopLoss: string;
+    target1: string;
+    target2: string;
+    invalidation: string;
+  };
+  recommendedFor: string;
+}
+
+export interface StrategyTradeOrder {
+  id: string;
+  timestamp: string;
+  symbol: string;
+  strategyName: string;
+  action: 'PROBE BUY' | 'ADD / SCALE IN' | 'TAKE PROFIT (T1)' | 'TAKE PROFIT (T2)' | 'TRAILING STOP' | 'STOP LOSS EXIT';
+  price: number;
+  quantity: number;
+  currency: string;
+  pnl?: number;
+  pnlPct?: number;
+  status: 'FILLED' | 'TRIGGERED' | 'TARGET_HIT' | 'SL_HIT';
+  reasoning: string;
+}
+
+export interface StrategyExecutionReport {
+  strategyId: string;
+  strategyName: string;
+  symbol: string;
+  currency: string;
+  currentPrice: number;
+  activeSignal: 'STRONG BUY' | 'ACCUMULATE PROBE' | 'BREAKOUT ADD' | 'HOLDING IN PROFIT' | 'EXIT / DEFENSIVE';
+  confidenceScore: number; // 0-100%
+  executionAccuracy: number; // 0-100%
+  recommendedAllocationPct: number; // e.g. 10%
+  levels: {
+    entryPrice: number;
+    probeLevel: number;
+    addLevel: number;
+    stopLoss: number;
+    target1: number;
+    target2: number;
+    target3: number;
+    riskRewardRatio: string;
+    riskPerShare: number;
+    maxRewardPerShare: number;
+  };
+  aiExecutionThesis: string;
+  ruleChecklist: Array<{
+    rule: string;
+    status: 'PASSED' | 'PENDING' | 'WAITING_TRIGGER';
+    details: string;
+  }>;
+  recentOrders: StrategyTradeOrder[];
+  metrics: {
+    totalTrades: number;
+    winningTrades: number;
+    losingTrades: number;
+    winRate: number;
+    profitFactor: number;
+    totalPnl: number;
+    maxDrawdownPct: number;
+    sharpeRatio: number;
+  };
+}
+
+export interface HiddenAiSignal {
+  id: string;
+  type: 'Order Block Imbalance' | 'Hidden Bullish Divergence' | 'Liquidity Sweep' | 'Dark Pool Footprint' | 'Volatility Compression' | 'Gamma Squeeze Trap';
+  asset: string;
+  assetClass: 'NSE Stock' | 'Commodity' | 'Crypto 24/7';
+  confidence: number;
+  timeframe: string;
+  description: string;
+  whatHumansMiss: string;
+  impactLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  actionableRecommendation: string;
+  detectedAt: string;
+}
+
+export interface GainLockShield {
+  id: string;
+  symbol: string;
+  entryPrice: number;
+  currentPrice: number;
+  unrealizedGainPct: number;
+  lockedGainPct: number;
+  currentStopPrice: number;
+  initialStopPrice: number;
+  breakevenLocked: boolean;
+  ratchetTier: string;
+  downsideProtectedAmount: number;
+  currency: string;
+}
+
+export interface AiAgentLearningMemory {
+  id: string;
+  tradeDate: string;
+  symbol: string;
+  assetClass: 'NSE Stock' | 'Commodity' | 'Crypto 24/7';
+  setupType: string;
+  outcome: 'WIN (+Gain Locked)' | 'WIN (Target Hit)' | 'CONTROLLED LOSS (SL Invalidation)';
+  pnlPct: number;
+  lessonLearned: string;
+  parameterAdjustment: string;
+  accuracyDelta: string;
+}
+
+export interface AiAgentAssetScan {
+  symbol: string;
+  name: string;
+  assetClass: 'NSE Stock' | 'Commodity' | 'Crypto 24/7';
+  marketStatus: 'OPEN' | 'LIVE 24/7' | 'PRE-MARKET';
+  price: number;
+  change24h: number;
+  currency: string;
+  aiPrediction: 'STRONG ACCUMULATION' | 'BREAKOUT PENDING' | 'PROBE LONG' | 'DEFENSIVE HEDGE' | 'LOCK GAINS';
+  confidence: number;
+  accuracyScore: number;
+  keyLevel: string;
+  strategyDeployed: string;
+  deployedInSeconds: number;
 }
 

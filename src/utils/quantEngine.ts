@@ -6,6 +6,8 @@ import {
   SentimentAnalysisData,
   WeeklyForwardProjection,
   WeeklyForwardDay,
+  MonthlyForwardProjection,
+  MonthlyForwardWeek,
   WeeklyCandle,
   WeeklyMethodAnalysis,
   ExecutionProtocolLevels,
@@ -452,6 +454,17 @@ export function generatePrediction(
     sentimentData?.score || 0
   );
 
+  // Generate 1-Month (4-Week Forward) Macro Horizon Projection
+  const monthlyProjection = calculateMonthlyForwardProjection(
+    symbol,
+    currency,
+    lastClose,
+    volatility,
+    rows,
+    weeklyProjection,
+    sentimentData?.score || 0
+  );
+
   // Generate Multi-Timeframe Weekly Methodology Analysis (Supertrend ATR 10 / 2.25, Wilder RSI 14, Composite 50/35/15, Probe/Add/Invalidation)
   const weeklyMethod = calculateWeeklyMethodology(
     symbol,
@@ -476,6 +489,7 @@ export function generatePrediction(
     backtestMetrics: metrics,
     intradayPrediction,
     weeklyProjection,
+    monthlyProjection,
     weeklyMethod,
     chartData,
   };
@@ -745,6 +759,127 @@ export function calculateWeeklyForwardProjection(
     overallBias,
     weeklyConfidence,
     dailyProjections,
+  };
+}
+
+/**
+ * Calculates 1-Month (4-Week Forward Macro Horizon) Projection Model
+ */
+export function calculateMonthlyForwardProjection(
+  symbol: string,
+  currency: string,
+  lastClose: number,
+  volatility: number,
+  rows: StockDataRow[],
+  weeklyProjection: WeeklyForwardProjection,
+  sentimentScore: number = 0
+): MonthlyForwardProjection {
+  const monthVolPct = Math.max(0.015, Math.min(0.08, volatility));
+  const week1Target = weeklyProjection?.endOfWeekTarget || lastClose * (1 + (sentimentScore >= 0 ? 0.015 : -0.01));
+  const baseWeeklyDrift = ((week1Target - lastClose) / lastClose);
+
+  // Derive 4-week macro trajectory with mean-reversion and momentum continuity
+  const weeklyBreakdowns: MonthlyForwardWeek[] = [];
+  let prevWeekClose = lastClose;
+  let runningMin = lastClose;
+  let runningMax = lastClose;
+
+  const catalysts = [
+    `Momentum Continuation & Institutional Flow Absorption`,
+    `Moving Average Support Retest & Volume Consolidation`,
+    `Earnings/Macro Guidance & Valuation Multiple Re-rating`,
+    `Month-End Balance Sheet Drift & Target Convergence`,
+  ];
+
+  const today = new Date();
+
+  for (let w = 1; w <= 4; w++) {
+    // Week start and end dates
+    const startOffsetDays = (w - 1) * 7 + 1;
+    const endOffsetDays = w * 7;
+    
+    const dStart = new Date(today);
+    dStart.setDate(today.getDate() + startOffsetDays);
+    const dEnd = new Date(today);
+    dEnd.setDate(today.getDate() + endOffsetDays);
+
+    const startStr = dStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const endStr = dEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const weekLabel = `Week ${w} (${startStr} - ${endStr})`;
+
+    // Projected weekly compound with decay factor
+    const decay = Math.pow(0.85, w - 1);
+    const stepReturn = baseWeeklyDrift * decay + (sentimentScore > 30 ? 0.006 * w : 0.002);
+    
+    let predClose = w === 1 ? week1Target : prevWeekClose * (1 + stepReturn);
+    
+    // Bounds check to avoid unrealistic runaway extrapolation (cap monthly shift within -25% to +35%)
+    predClose = Math.max(lastClose * 0.75, Math.min(lastClose * 1.35, predClose));
+
+    const weekExpLow = predClose * (1 - monthVolPct * Math.sqrt(w) * 0.75);
+    const weekExpHigh = predClose * (1 + monthVolPct * Math.sqrt(w) * 0.85);
+
+    runningMin = Math.min(runningMin, weekExpLow);
+    runningMax = Math.max(runningMax, weekExpHigh);
+
+    const weeklyChangePct = ((predClose - prevWeekClose) / prevWeekClose) * 100;
+    const cumulativeChangePct = ((predClose - lastClose) / lastClose) * 100;
+
+    let trendSignal: MonthlyForwardWeek["trendSignal"] = "NEUTRAL";
+    if (weeklyChangePct >= 2.5) trendSignal = "STRONG BULLISH";
+    else if (weeklyChangePct > 0.4) trendSignal = "BULLISH";
+    else if (weeklyChangePct < -0.8) trendSignal = "BEARISH";
+
+    weeklyBreakdowns.push({
+      weekNumber: w,
+      weekLabel,
+      startDate: startStr,
+      endDate: endStr,
+      predictedClose: Math.round(predClose * 100) / 100,
+      expectedLow: Math.round(weekExpLow * 100) / 100,
+      expectedHigh: Math.round(weekExpHigh * 100) / 100,
+      weeklyChangePct: Math.round(weeklyChangePct * 100) / 100,
+      cumulativeChangePct: Math.round(cumulativeChangePct * 100) / 100,
+      trendSignal,
+      keyCatalyst: catalysts[w - 1] || "Quarterly Liquidity Transition",
+    });
+
+    prevWeekClose = predClose;
+  }
+
+  const endOfMonthTarget = weeklyBreakdowns[3].predictedClose;
+  const monthlyChangePct = ((endOfMonthTarget - lastClose) / lastClose) * 100;
+
+  let monthlyBias: MonthlyForwardProjection["monthlyBias"] = "MODERATE CONSOLIDATION";
+  if (monthlyChangePct >= 6.0) monthlyBias = "STRONG EXPANSION";
+  else if (monthlyChangePct > 1.5) monthlyBias = "BULLISH CONTINUATION";
+  else if (monthlyChangePct <= -3.5) monthlyBias = "BEARISH RETRACEMENT";
+
+  const monthlyConfidence = Math.min(88, Math.max(60, Math.round(80 + sentimentScore * 0.06 - volatility * 40)));
+  const supportLevel = Math.round((lastClose * (1 - monthVolPct * 1.5)) * 100) / 100;
+  const resistanceLevel = Math.round((endOfMonthTarget * 1.025) * 100) / 100;
+
+  let macroDriver = `Institutional accumulation corridor with ${monthlyBias.toLowerCase()} bias. Model anticipates target of ${currency}${endOfMonthTarget} backed by multi-week momentum drift.`;
+  if (sentimentScore >= 50) {
+    macroDriver = `Sustained bullish sentiment and positive volume accumulation support a 30-day expansion toward ${currency}${endOfMonthTarget} (+${monthlyChangePct.toFixed(2)}%).`;
+  } else if (sentimentScore < 0) {
+    macroDriver = `Defensive consolidation expected with primary support holding near ${currency}${supportLevel} and key recovery hurdle at ${currency}${resistanceLevel}.`;
+  }
+
+  return {
+    symbol,
+    currency,
+    startPrice: Math.round(lastClose * 100) / 100,
+    endOfMonthTarget: Math.round(endOfMonthTarget * 100) / 100,
+    monthlyChangePct: Math.round(monthlyChangePct * 100) / 100,
+    monthlyLow: Math.round(runningMin * 100) / 100,
+    monthlyHigh: Math.round(runningMax * 100) / 100,
+    monthlyBias,
+    monthlyConfidence,
+    supportLevel,
+    resistanceLevel,
+    macroDriver,
+    weeklyBreakdowns,
   };
 }
 

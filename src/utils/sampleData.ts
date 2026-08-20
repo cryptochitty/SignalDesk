@@ -1,27 +1,31 @@
 import { StockPreset } from "../types";
 
 /**
- * Generates a clean 6-month daily trading series (Feb 2, 2026 to Aug 5, 2026)
- * with deterministic, realistic price walk for walk-forward backtesting.
+ * Generates a clean 6-month daily trading series ending on today's date
+ * with exact ending price matching live benchmark price.
  */
 function generate6MonthSeries(startPrice: number, endPrice: number, seed: number): string {
   const dates: string[] = [];
-  const start = new Date(Date.UTC(2026, 1, 2)); // Feb 2, 2026
-  const end = new Date(Date.UTC(2026, 7, 5));   // Aug 5, 2026
-
-  let curr = new Date(start);
-  while (curr <= end) {
+  const today = new Date(); // Current date (2026-08-20)
+  
+  // Collect 130 past business days up to today
+  let curr = new Date(today);
+  const businessDays: string[] = [];
+  let count = 0;
+  
+  while (count < 130) {
     const day = curr.getUTCDay();
     if (day !== 0 && day !== 6) {
       const y = curr.getUTCFullYear();
       const m = String(curr.getUTCMonth() + 1).padStart(2, "0");
       const d = String(curr.getUTCDate()).padStart(2, "0");
-      dates.push(`${y}-${m}-${d}`);
+      businessDays.unshift(`${y}-${m}-${d}`);
+      count++;
     }
-    curr.setUTCDate(curr.getUTCDate() + 1);
+    curr.setUTCDate(curr.getUTCDate() - 1);
   }
 
-  const n = dates.length;
+  const n = businessDays.length;
   const rows: string[] = ["Date,Close"];
 
   let rng = seed;
@@ -37,13 +41,13 @@ function generate6MonthSeries(startPrice: number, endPrice: number, seed: number
     if (i === 0) {
       price = startPrice;
     } else if (i === n - 1) {
-      price = endPrice;
+      price = endPrice; // Strict exact match on latest close
     } else {
       const noise = (pseudoRandom() - 0.48) * (startPrice * 0.015);
       const trendPrice = startPrice + step * i;
       price = trendPrice + noise;
     }
-    rows.push(`${dates[i]},${price.toFixed(2)}`);
+    rows.push(`${businessDays[i]},${price.toFixed(2)}`);
   }
 
   return rows.join("\n");
@@ -54,46 +58,163 @@ export const STOCK_PRESETS: StockPreset[] = [
     id: "urbanco-nse",
     symbol: "URBANCO",
     name: "Urban Company",
-    companyName: "Urban Company (URBANCO)",
+    companyName: "Urban Company (NSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(118.50, 145.49, 101),
+  },
+  {
+    id: "hcc-nse",
+    symbol: "HCC",
+    name: "Hindustan Construction",
+    companyName: "Hindustan Construction Co Ltd (NSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(15.20, 21.22, 102),
+  },
+  {
+    id: "bepl-nse",
+    symbol: "BEPL",
+    name: "Bhansali Eng Polymers",
+    companyName: "Bhansali Engineering Polymers Ltd (NSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(98.40, 123.23, 103),
+  },
+  {
+    id: "pinelabs-nse",
+    symbol: "PINELABS",
+    name: "Pine Labs",
+    companyName: "Pine Labs (NSE Pre-IPO)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(134.00, 159.73, 104),
+  },
+  {
+    id: "moschip-nse",
+    symbol: "MOSCHIP",
+    name: "MosChip Technologies",
+    companyName: "MosChip Technologies Ltd (NSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(165.00, 206.31, 105),
+  },
+  {
+    id: "ioc-bse",
+    symbol: "IOC",
+    name: "Indian Oil Corp",
+    companyName: "Indian Oil Corporation Ltd (BSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(148.00, 135.90, 106),
+  },
+  {
+    id: "krrail-bse",
+    symbol: "KRRAIL",
+    name: "Konkan Railway (KR Rail)",
+    companyName: "Konkan Railway Corp Ltd (BSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(26.50, 22.70, 107),
+  },
+  {
+    id: "pwl-bse",
+    symbol: "PWL",
+    name: "Premier Polyfilm (PWL)",
+    companyName: "Premier Polyfilm Ltd (BSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(98.00, 122.15, 108),
+  },
+  {
+    id: "taparia-bse",
+    symbol: "TAPARIA",
+    name: "Taparia Tools",
+    companyName: "Taparia Tools Ltd (BSE)",
+    currency: "₹",
+    category: "Kite Watchlist",
+    csvData: generate6MonthSeries(12.14, 12.14, 109),
+  },
+  {
+    id: "tatamotors-nse",
+    symbol: "TATAMOTORS",
+    name: "Tata Motors Ltd",
+    companyName: "Tata Motors Ltd (NSE)",
     currency: "₹",
     category: "NSE India",
-    csvData: generate6MonthSeries(182.50, 142.24, 101),
+    csvData: generate6MonthSeries(885.00, 965.50, 202),
   },
   {
     id: "reliance-nse",
-    symbol: "RELIANCE.NS",
+    symbol: "RELIANCE",
     name: "Reliance Industries",
     companyName: "Reliance Industries Limited (NSE)",
     currency: "₹",
     category: "NSE India",
-    csvData: generate6MonthSeries(1280.00, 1525.80, 202),
+    csvData: generate6MonthSeries(2810.00, 2985.00, 202),
+  },
+  {
+    id: "infy-nse",
+    symbol: "INFY",
+    name: "Infosys Ltd",
+    companyName: "Infosys Ltd (NSE)",
+    currency: "₹",
+    category: "NSE India",
+    csvData: generate6MonthSeries(1720.00, 1842.00, 303),
   },
   {
     id: "tcs-nse",
-    symbol: "TCS.NS",
+    symbol: "TCS",
     name: "Tata Consultancy Services",
     companyName: "Tata Consultancy Services Ltd (NSE)",
     currency: "₹",
     category: "NSE India",
-    csvData: generate6MonthSeries(3850.00, 4448.60, 303),
+    csvData: generate6MonthSeries(3980.00, 4185.00, 404),
+  },
+  {
+    id: "meesho-nse",
+    symbol: "MEESHO",
+    name: "Meesho",
+    companyName: "Meesho (NSE / Pre-IPO)",
+    currency: "₹",
+    category: "NSE India",
+    csvData: generate6MonthSeries(174.50, 192.95, 505),
+  },
+  {
+    id: "tvshltd-nse",
+    symbol: "TVSHLTD",
+    name: "TVS Holdings Ltd",
+    companyName: "TVS Holdings Ltd (NSE)",
+    currency: "₹",
+    category: "NSE India",
+    csvData: generate6MonthSeries(13200.00, 14096.00, 606),
+  },
+  {
+    id: "olaelec-nse",
+    symbol: "OLAELEC",
+    name: "Ola Electric Mobility",
+    companyName: "Ola Electric Mobility Ltd (NSE)",
+    currency: "₹",
+    category: "NSE India",
+    csvData: generate6MonthSeries(44.20, 38.61, 707),
   },
   {
     id: "nifty50-nse",
-    symbol: "NIFTY50.NS",
+    symbol: "NIFTY50",
     name: "NSE Nifty 50 Index",
     companyName: "Nifty 50 Index (National Stock Exchange of India)",
     currency: "₹",
     category: "Indices",
-    csvData: generate6MonthSeries(22100.00, 25520.80, 404),
+    csvData: generate6MonthSeries(23400.00, 24231.85, 808),
   },
   {
-    id: "tech-sample",
+    id: "nvda-tech",
     symbol: "NVDA",
     name: "NVIDIA Corporation",
     companyName: "NVIDIA Corp (NASDAQ)",
     currency: "$",
     category: "US Tech",
-    csvData: generate6MonthSeries(112.50, 142.55, 505),
+    csvData: generate6MonthSeries(108.50, 124.80, 909),
   },
   {
     id: "aapl-tech",
@@ -102,7 +223,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Apple Inc. (NASDAQ)",
     currency: "$",
     category: "US Tech",
-    csvData: generate6MonthSeries(182.00, 251.20, 606),
+    csvData: generate6MonthSeries(205.00, 224.50, 1010),
   },
   {
     id: "hl-btc",
@@ -111,7 +232,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Bitcoin Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: generate6MonthSeries(51800.00, 68820.50, 707),
+    csvData: generate6MonthSeries(58200.00, 64800.00, 1111),
   },
   {
     id: "hl-eth",
@@ -120,7 +241,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Ethereum Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: generate6MonthSeries(2450.00, 3640.20, 808),
+    csvData: generate6MonthSeries(2420.00, 2680.00, 1212),
   },
   {
     id: "hl-sol",
@@ -129,6 +250,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Solana Perpetual (Hyperliquid L1 DEX)",
     currency: "$",
     category: "Hyperliquid Crypto Perp",
-    csvData: generate6MonthSeries(102.00, 174.50, 909),
+    csvData: generate6MonthSeries(134.00, 152.00, 1313),
   },
 ];
+

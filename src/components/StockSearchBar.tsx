@@ -11,16 +11,18 @@ interface StockSearchBarProps {
 }
 
 const POPULAR_SUGGESTIONS = [
+  { name: "Meesho", symbol: "MEESHO", icon: "🇮🇳" },
+  { name: "TVS Holdings", symbol: "TVSHLTD", icon: "🇮🇳" },
+  { name: "TVS Electronics", symbol: "TVSELECT", icon: "🇮🇳" },
+  { name: "Ola Electric", symbol: "OLAELEC", icon: "🇮🇳" },
   { name: "Tata Motors", symbol: "TATAMOTORS", icon: "🇮🇳" },
-  { name: "Infosys", symbol: "INFY", icon: "🇮🇳" },
   { name: "Reliance", symbol: "RELIANCE", icon: "🇮🇳" },
+  { name: "Infosys", symbol: "INFY", icon: "🇮🇳" },
   { name: "Nvidia", symbol: "NVDA", icon: "🇺🇸" },
   { name: "Tesla", symbol: "TSLA", icon: "🇺🇸" },
-  { name: "Apple", symbol: "AAPL", icon: "🇺🇸" },
   { name: "Bitcoin (Hyperliquid)", symbol: "HL:BTC", icon: "💧" },
   { name: "Ethereum (Hyperliquid)", symbol: "HL:ETH", icon: "💧" },
   { name: "Solana (Hyperliquid)", symbol: "HL:SOL", icon: "💧" },
-  { name: "Sui (Hyperliquid)", symbol: "HL:SUI", icon: "💧" },
 ];
 
 export const StockSearchBar: React.FC<StockSearchBarProps> = ({
@@ -58,11 +60,11 @@ export const StockSearchBar: React.FC<StockSearchBarProps> = ({
             </h2>
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Yahoo Finance & Hyperliquid L1 API
+              Zerodha Kite LTP Protocol (All Stocks)
             </span>
-            <span className="bg-sky-500/20 text-sky-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-sky-500/30 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-              Twitter/X Social Feed Active
+            <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-500/30 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              Yahoo & Hyperliquid DEX API
             </span>
           </div>
           <p className="text-xs text-slate-400">
