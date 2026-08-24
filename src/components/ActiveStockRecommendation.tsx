@@ -19,8 +19,12 @@ import {
   Calculator,
   Sliders,
   DollarSign,
+  Smartphone,
+  MessageSquare,
+  Share2,
 } from "lucide-react";
 import { StockRecommendationDetails, generateStockRecommendation } from "../utils/stockRecommendationEngine";
+import { MobileShareModal } from "./MobileShareModal";
 
 interface ActiveStockRecommendationProps {
   symbol: string;
@@ -43,6 +47,7 @@ export const ActiveStockRecommendation: React.FC<ActiveStockRecommendationProps>
 }) => {
   const [copied, setCopied] = useState(false);
   const [positionQty, setPositionQty] = useState<number>(100);
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState<boolean>(false);
 
   const recommendation: StockRecommendationDetails = generateStockRecommendation(
     symbol,
@@ -203,8 +208,16 @@ Position Size Example (${positionQty} shares):
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           {getSignalBadge(recommendation.signal)}
+          <button
+            onClick={() => setIsMobileModalOpen(true)}
+            className="p-2 bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 rounded-xl border border-emerald-700/60 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm shadow-emerald-950/50"
+            title="Send Prediction to Mobile (WhatsApp / SMS)"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Send to Mobile</span>
+          </button>
           <button
             onClick={handleCopyPlan}
             className="p-2 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
@@ -473,6 +486,24 @@ Position Size Example (${positionQty} shares):
           </div>
         </div>
       </div>
+
+      {/* Mobile Share Modal (WhatsApp / SMS) */}
+      <MobileShareModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+        symbol={recommendation.symbol}
+        companyName={recommendation.companyName}
+        currency={currency}
+        currentPrice={price}
+        targetPrice={target1}
+        stopLossPrice={stopLoss}
+        predictionPrice={target2}
+        confidencePct={88}
+        signal={recommendation.signal as any}
+        exchange={currency === "$" ? "Crypto DEX (Hyperliquid)" : "NSE"}
+        timeframe="1-5 Trading Days (Swing / Positional)"
+        catalystSummary={`${recommendation.rationale} • Risk/Reward: ${recommendation.riskRewardRatio}`}
+      />
     </section>
   );
 };

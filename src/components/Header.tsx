@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell, FileText, FileSpreadsheet } from "lucide-react";
 import { StockPreset } from "../types";
 import { STOCK_PRESETS } from "../utils/sampleData";
@@ -26,14 +26,47 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPdfReportModal,
   onExportExcel,
 }) => {
-
   const [headerQuery, setHeaderQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleHeaderSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!headerQuery.trim() || !onSearchStock || isSearching) return;
+    setIsDropdownOpen(false);
     onSearchStock(headerQuery.trim());
   };
+
+  const handleSelectSuggestion = (preset: StockPreset) => {
+    setHeaderQuery(preset.name);
+    setIsDropdownOpen(false);
+    onSelectPreset(preset);
+    if (onSearchStock) {
+      onSearchStock(preset.symbol);
+    }
+  };
+
+  const matchingPresets = headerQuery.trim()
+    ? STOCK_PRESETS.filter((p) => {
+        const q = headerQuery.trim().toUpperCase();
+        return (
+          p.symbol.toUpperCase().includes(q) ||
+          p.name.toUpperCase().includes(q) ||
+          (p.companyName && p.companyName.toUpperCase().includes(q))
+        );
+      }).slice(0, 6)
+    : [];
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-slate-100 sticky top-0 z-40 px-4 py-3 shadow-md">
@@ -58,33 +91,77 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Search Bar in Header */}
+        {/* Search Bar in Header with Live Autocomplete */}
         {onSearchStock && (
-          <form onSubmit={handleHeaderSearch} className="flex-1 max-w-md w-full my-1 md:my-0">
-            <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-              <input
-                type="text"
-                value={headerQuery}
-                onChange={(e) => setHeaderQuery(e.target.value)}
-                placeholder="Type Stock Name (e.g. Tata Motors, INFY, NVDA)..."
-                disabled={isSearching}
-                className="w-full bg-slate-950 border border-slate-700 hover:border-indigo-500/50 focus:border-indigo-500 rounded-xl pl-9 pr-24 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
-              />
-              <button
-                type="submit"
-                disabled={!headerQuery.trim() || isSearching}
-                className="absolute right-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
-              >
-                {isSearching ? (
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3 text-indigo-200" />
-                )}
-                <span>AI Analyze</span>
-              </button>
-            </div>
-          </form>
+          <div ref={searchContainerRef} className="relative flex-1 max-w-md w-full my-1 md:my-0">
+            <form onSubmit={handleHeaderSearch}>
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={headerQuery}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  onChange={(e) => {
+                    setHeaderQuery(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  placeholder="Type Stock Name (e.g. Moschip, Urban Co, Tata Motors)..."
+                  disabled={isSearching}
+                  className="w-full bg-slate-950 border border-slate-700 hover:border-indigo-500/50 focus:border-indigo-500 rounded-xl pl-9 pr-24 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-medium"
+                />
+                <button
+                  type="submit"
+                  disabled={!headerQuery.trim() || isSearching}
+                  className="absolute right-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                >
+                  {isSearching ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 text-indigo-200" />
+                  )}
+                  <span>AI Analyze</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Suggestions Overlay */}
+            {isDropdownOpen && matchingPresets.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-950 border border-indigo-500/40 rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-slate-800/60">
+                <div className="px-3 py-1.5 bg-indigo-950/40 text-[10px] font-bold text-indigo-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Quick Select Match</span>
+                  <span>Direct Quant Sync</span>
+                </div>
+                {matchingPresets.map((p) => {
+                  // extract latest price from CSV
+                  const lines = p.csvData.trim().split("\n");
+                  const lastLine = lines[lines.length - 1] || "";
+                  const priceStr = lastLine.split(",")[1] || "";
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-indigo-900/30 flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-indigo-300">
+                          {p.symbol}
+                        </span>
+                        <span className="text-xs text-slate-300 truncate max-w-[180px]">
+                          {p.name}
+                        </span>
+                      </div>
+                      {priceStr && (
+                        <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                          {p.currency}{parseFloat(priceStr).toFixed(2)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Quick Stock Selector, PDF Report & Notification Bell */}
@@ -145,6 +222,13 @@ export const Header: React.FC<HeaderProps> = ({
                     </option>
                   </optgroup>
                 )}
+                <optgroup label="⚡ Zerodha Kite Watchlist">
+                  {STOCK_PRESETS.filter((p) => p.category === "Kite Watchlist").map((p) => (
+                    <option key={p.id} value={p.id}>
+                      📌 {p.symbol} - {p.name}
+                    </option>
+                  ))}
+                </optgroup>
                 <optgroup label="NSE India Stocks">
                   {STOCK_PRESETS.filter((p) => p.category === "NSE India").map((p) => (
                     <option key={p.id} value={p.id}>
@@ -163,6 +247,13 @@ export const Header: React.FC<HeaderProps> = ({
                   {STOCK_PRESETS.filter((p) => p.category === "US Tech").map((p) => (
                     <option key={p.id} value={p.id}>
                       🇺🇸 {p.symbol} - {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Crypto Perpetuals">
+                  {STOCK_PRESETS.filter((p) => p.category === "Hyperliquid Crypto Perp").map((p) => (
+                    <option key={p.id} value={p.id}>
+                      💧 {p.symbol} - {p.name}
                     </option>
                   ))}
                 </optgroup>

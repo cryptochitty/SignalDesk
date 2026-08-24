@@ -570,3 +570,27 @@ export interface AiAgentAssetScan {
   deployedInSeconds: number;
 }
 
+export interface GroundedNewsHeadline {
+  id: string;
+  headline: string;
+  summary: string;
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  category: 'Earnings & Revenue' | 'Corporate Action' | 'Regulatory & SEBI' | 'Analyst Target' | 'Order Book & Deals' | 'Sector & Macro';
+  source: string;
+  url?: string;
+  timeAgo: string;
+  impactScore: number; // 1-100
+}
+
+export interface GroundedNewsData {
+  symbol: string;
+  companyName: string;
+  overallSentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sentimentScore: number; // -100 to +100
+  isGrounded: boolean;
+  groundingSources: Array<{ title: string; uri: string }>;
+  searchQueriesUsed: string[];
+  lastUpdated: string;
+  headlines: GroundedNewsHeadline[];
+}
+

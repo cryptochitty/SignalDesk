@@ -11,6 +11,8 @@ interface StockSearchBarProps {
 }
 
 const POPULAR_SUGGESTIONS = [
+  { name: "MosChip Technologies", symbol: "MOSCHIP", icon: "🇮🇳" },
+  { name: "Urban Company", symbol: "URBANCO", icon: "🇮🇳" },
   { name: "Meesho", symbol: "MEESHO", icon: "🇮🇳" },
   { name: "TVS Holdings", symbol: "TVSHLTD", icon: "🇮🇳" },
   { name: "TVS Electronics", symbol: "TVSELECT", icon: "🇮🇳" },

@@ -1,6 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Bell, ArrowUpRight, ArrowDownRight, Sliders, ShieldAlert, Sparkles, CheckCircle2, RefreshCw, History, Volume2 } from "lucide-react";
+import {
+  Bell,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sliders,
+  ShieldAlert,
+  Sparkles,
+  CheckCircle2,
+  RefreshCw,
+  History,
+  Volume2,
+  Activity,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  Percent,
+  Smartphone,
+  Share2,
+  MessageSquare,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Line,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import { ToastAlert } from "../types";
+import { MobileShareModal } from "./MobileShareModal";
 
 interface PriceThresholdCardProps {
   stockSymbol: string;
@@ -8,6 +38,12 @@ interface PriceThresholdCardProps {
   currency: string;
   currentPrice: number;
   predictedPrice: number | undefined;
+  chartData?: Array<{
+    date: string;
+    actualClose?: number;
+    forecastPrice?: number;
+    ma?: number;
+  }>;
   enabled: boolean;
   onToggleEnabled: (enabled: boolean) => void;
   targetPrice: number;
@@ -25,6 +61,7 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
   currency,
   currentPrice,
   predictedPrice,
+  chartData,
   enabled,
   onToggleEnabled,
   targetPrice,
@@ -36,6 +73,7 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
   onClearHistory,
 }) => {
   const [inputVal, setInputVal] = useState<string>(targetPrice.toString());
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState<boolean>(false);
 
   // Keep input in sync with external targetPrice updates
   useEffect(() => {
@@ -58,6 +96,14 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
     setInputVal(newPrice.toString());
   };
 
+  const resetToPredictedPrice = () => {
+    if (predictedPrice) {
+      const newPrice = parseFloat(predictedPrice.toFixed(2));
+      onTargetPriceChange(newPrice);
+      setInputVal(newPrice.toString());
+    }
+  };
+
   const resetToCurrentPrice = () => {
     const newPrice = parseFloat((currentPrice || 100).toFixed(2));
     onTargetPriceChange(newPrice);
@@ -72,13 +118,56 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
       (condition === "falls_below" && predictedPrice < targetPrice) ||
       (condition === "either" && Math.abs(predictedPrice - targetPrice) > 0.01));
 
+  // Current price proximity to target price
+  const priceDiffFromTarget = targetPrice > 0 ? currentPrice - targetPrice : 0;
+  const pctProximity =
+    targetPrice > 0 ? ((currentPrice - targetPrice) / targetPrice) * 100 : 0;
+  const absPctDistance = Math.abs(pctProximity);
+
+  // Proximity status categorization
+  const isTriggerImminent = absPctDistance <= 1.0;
+  const isTriggerClose = absPctDistance <= 3.0;
+
   const pctDiffFromTarget =
     predictedPrice && targetPrice > 0
       ? (((predictedPrice - targetPrice) / targetPrice) * 100).toFixed(2)
       : "0.00";
 
+  // Prepare mini-chart dataset: recent 15-20 data points from chartData or fallback synthetic trend
+  const miniChartData = React.useMemo(() => {
+    if (chartData && chartData.length > 0) {
+      const recent = chartData.slice(-18);
+      return recent.map((d) => ({
+        date: d.date,
+        price: d.actualClose ?? d.forecastPrice ?? currentPrice,
+        forecast: d.forecastPrice,
+        target: targetPrice,
+      }));
+    }
+
+    // Synthetic fallback if no chartData
+    const points = [];
+    const base = currentPrice || 100;
+    for (let i = 12; i >= 0; i--) {
+      const variance = (Math.sin(i * 0.8) * 0.02 - (i / 12) * 0.015) * base;
+      const p = parseFloat((base - variance).toFixed(2));
+      points.push({
+        date: `T-${i}`,
+        price: p,
+        forecast: i === 0 ? predictedPrice : undefined,
+        target: targetPrice,
+      });
+    }
+    return points;
+  }, [chartData, currentPrice, predictedPrice, targetPrice]);
+
+  const allChartPrices = miniChartData.map((d) => d.price).concat([targetPrice]);
+  if (predictedPrice) allChartPrices.push(predictedPrice);
+  const minChartY = Math.floor(Math.min(...allChartPrices) * 0.985);
+  const maxChartY = Math.ceil(Math.max(...allChartPrices) * 1.015);
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+    <div id="price-threshold-card" className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
       {/* Card Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
@@ -119,6 +208,161 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
         </div>
       </div>
 
+      {/* Mini-Chart: Price Path Relative to Target Price & Proximity Radar */}
+      <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5 space-y-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded bg-indigo-500/20 text-indigo-400">
+              <Target className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-200">
+                Historical Price Path vs Target Threshold
+              </span>
+              <span className="text-[11px] text-slate-400 ml-2">
+                (Target Line: <strong className="font-mono text-amber-400">{currency}{targetPrice.toFixed(2)}</strong>)
+              </span>
+            </div>
+          </div>
+
+          {/* Proximity Pill */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${
+                isTriggerImminent
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse"
+                  : isTriggerClose
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  : "bg-slate-800 text-slate-300 border-slate-700"
+              }`}
+            >
+              <Activity className="w-3 h-3" />
+              <span>
+                Proximity:{" "}
+                <strong className="font-mono">
+                  {priceDiffFromTarget >= 0 ? "+" : ""}
+                  {currency}
+                  {Math.abs(priceDiffFromTarget).toFixed(2)} ({pctProximity >= 0 ? "+" : ""}
+                  {pctProximity.toFixed(2)}%)
+                </strong>
+              </span>
+              {isTriggerImminent && (
+                <span className="ml-1 bg-rose-500 text-slate-950 font-extrabold text-[9px] px-1 py-0.2 rounded uppercase">
+                  Imminent
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recharts Mini-Chart Container */}
+        <div className="w-full h-36 pt-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={miniChartData} margin={{ top: 8, right: 12, left: -15, bottom: 0 }}>
+              <defs>
+                <linearGradient id="pricePathGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+
+              <XAxis
+                dataKey="date"
+                stroke="#475569"
+                tick={{ fontSize: 10, fill: "#94A3B8" }}
+                tickLine={false}
+                axisLine={{ stroke: "#334155" }}
+              />
+              <YAxis
+                domain={[minChartY, maxChartY]}
+                stroke="#475569"
+                tick={{ fontSize: 10, fill: "#94A3B8" }}
+                tickFormatter={(v) => `${currency}${v}`}
+                tickLine={false}
+                axisLine={{ stroke: "#334155" }}
+                orientation="right"
+              />
+
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload || !payload.length) return null;
+                  const pt = payload[0]?.payload;
+                  const price = pt?.price;
+                  const target = targetPrice;
+                  const diff = price !== undefined ? price - target : 0;
+                  const diffPct = target > 0 ? (diff / target) * 100 : 0;
+
+                  return (
+                    <div className="bg-slate-950 border border-slate-700 p-2 rounded-lg shadow-xl text-xs space-y-1 min-w-[160px]">
+                      <p className="font-semibold text-slate-300 border-b border-slate-800 pb-0.5">{label}</p>
+                      <div className="flex justify-between items-center text-slate-200">
+                        <span>Price:</span>
+                        <span className="font-mono font-bold text-indigo-400">{currency}{price?.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-amber-300">
+                        <span>Target Threshold:</span>
+                        <span className="font-mono font-bold">{currency}{target.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-800/80 text-[11px]">
+                        <span className="text-slate-400">Distance to Target:</span>
+                        <span className={`font-mono font-bold ${diff >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {diff >= 0 ? "+" : ""}{currency}{diff.toFixed(2)} ({diffPct >= 0 ? "+" : ""}{diffPct.toFixed(2)}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+
+              {/* Threshold Target Reference Line */}
+              <ReferenceLine
+                y={targetPrice}
+                stroke="#F59E0B"
+                strokeDasharray="4 4"
+                strokeWidth={2}
+                label={{
+                  value: `Target: ${currency}${targetPrice.toFixed(2)}`,
+                  position: "insideTopLeft",
+                  fill: "#FBBF24",
+                  fontSize: 10,
+                  fontWeight: "bold",
+                }}
+              />
+
+              {/* Historical Price Area */}
+              <Area
+                type="monotone"
+                dataKey="price"
+                stroke="#6366F1"
+                strokeWidth={2}
+                fill="url(#pricePathGradient)"
+                name="Price Path"
+                dot={{ r: 2, fill: "#818CF8" }}
+                activeDot={{ r: 5, fill: "#C7D2FE" }}
+                isAnimationActive={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Distance summary strip */}
+        <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400 border-t border-slate-800/60">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
+            Current Stock Price: <strong className="text-slate-200">{currency}{currentPrice.toFixed(2)}</strong>
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-0.5 bg-amber-400 inline-block"></span>
+            Threshold Target: <strong className="text-amber-400">{currency}{targetPrice.toFixed(2)}</strong>
+          </span>
+          {predictedPrice && (
+            <span className="flex items-center gap-1">
+              AI Forecast: <strong className="text-indigo-300 font-mono">{currency}{predictedPrice.toFixed(2)}</strong>
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Main Settings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* 1. Target Price Input */}
@@ -149,6 +393,17 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
           {/* Quick Preset Buttons */}
           <div className="flex items-center gap-1.5 pt-1 flex-wrap">
             <span className="text-[10px] text-slate-500">Quick set:</span>
+            {predictedPrice && (
+              <button
+                type="button"
+                onClick={resetToPredictedPrice}
+                className="text-[10px] font-mono bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-700/80 transition-colors flex items-center gap-1 font-bold"
+                title="Set threshold target directly to AI Predicted Price"
+              >
+                <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                AI Pred ({currency}{predictedPrice.toFixed(2)})
+              </button>
+            )}
             <button
               type="button"
               onClick={resetToCurrentPrice}
@@ -156,7 +411,7 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
               title="Reset threshold target to current stock price"
             >
               <RefreshCw className="w-2.5 h-2.5" />
-              Reset ({currency}{currentPrice.toFixed(2)})
+              LTP ({currency}{currentPrice.toFixed(2)})
             </button>
             <button
               type="button"
@@ -253,14 +508,26 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onTriggerTestToast}
-            className="w-full py-1.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Test Toast Notification</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileModalOpen(true)}
+              className="w-1/2 py-1.5 px-3 bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-emerald-950/40"
+              title="Send Alert & Prediction to WhatsApp / SMS"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Send to Mobile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onTriggerTestToast}
+              className="w-1/2 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Test Toast</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -308,6 +575,24 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Mobile Share Modal (WhatsApp / SMS) */}
+      <MobileShareModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+        symbol={stockSymbol}
+        companyName={companyName}
+        currency={currency}
+        currentPrice={currentPrice}
+        targetPrice={targetPrice}
+        predictionPrice={predictedPrice}
+        confidencePct={88}
+        signal={condition === "falls_below" ? "SELL" : "BUY"}
+        exchange={currency === "$" ? "Crypto DEX (Hyperliquid)" : "NSE"}
+        timeframe="Live Alert Threshold"
+        catalystSummary={`Price monitor threshold: ${currency}${targetPrice.toFixed(2)} (${condition === "exceeds" ? "Upside Breakout" : "Downside Defense"}) • Forecast: ${currency}${predictedPrice?.toFixed(2) || currentPrice.toFixed(2)}`}
+      />
     </div>
   );
 };
+
