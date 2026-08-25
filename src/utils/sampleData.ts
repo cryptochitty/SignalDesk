@@ -178,7 +178,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Meesho (NSE / Pre-IPO)",
     currency: "₹",
     category: "NSE India",
-    csvData: generate6MonthSeries(174.50, 192.95, 505),
+    csvData: generate6MonthSeries(184.50, 206.54, 505),
   },
   {
     id: "tvshltd-nse",

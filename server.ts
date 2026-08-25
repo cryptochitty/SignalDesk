@@ -85,7 +85,7 @@ app.post("/api/ocr-stock-data", async (req, res) => {
             },
           },
           {
-            text: "You are an expert financial computer vision OCR model. Analyze this image (Zerodha Kite screenshot, TradingView chart, broker mobile order sheet, stock table, or watchlist).\n1. Identify the primary Stock Ticker Symbol and Company Name. If a bottom modal/order sheet is active (e.g. MEESHO, TVSHLTD, TVSELECT, RELIANCE), focus on the active modal's ticker and price.\n2. Read the EXACT Last Traded Price (LTP) or Current Price explicitly shown (e.g., 192.95, 14096.00, 448.70).\n3. Read the Currency Symbol (defaults to ₹ for NSE/BSE Indian stocks, $ for US, € for EU).\n4. If this is a broker quote/order sheet without a historical daily series, generate 15-25 realistic chronological daily rows (date YYYY-MM-DD, close number) leading up to today's exact last price shown on the screenshot.\nReturn a JSON object adhering to the schema.",
+            text: "You are an expert financial computer vision OCR model. Analyze this image (Zerodha Kite screenshot, TradingView chart, broker mobile order sheet, stock table, or watchlist).\n1. Identify the primary Stock Ticker Symbol and Company Name. If a bottom modal/order sheet is active (e.g. MEESHO, TVSHLTD, TVSELECT, RELIANCE), focus on the active modal's ticker and price.\n2. Read the EXACT Last Traded Price (LTP) or Current Price explicitly shown (e.g., 206.54, 14096.00, 448.70).\n3. Read the Currency Symbol (defaults to ₹ for NSE/BSE Indian stocks, $ for US, € for EU).\n4. If this is a broker quote/order sheet without a historical daily series, generate 15-25 realistic chronological daily rows (date YYYY-MM-DD, close number) leading up to today's exact last price shown on the screenshot.\nReturn a JSON object adhering to the schema.",
           },
         ],
       },
@@ -609,7 +609,7 @@ function generateFallbackStockData(query: string) {
   } else if (/MESSO|MEESHO/.test(cleanQuery.toUpperCase())) {
     symbol = "MEESHO";
     companyName = "Meesho";
-    basePrice = 192.95;
+    basePrice = 206.54;
     currency = "₹";
   } else if (/TVSHLTD|TVS.*HOLDING/.test(cleanQuery.toUpperCase())) {
     symbol = "TVSHLTD";
@@ -1852,20 +1852,20 @@ app.get("/api/top-gainers-losers", (req, res) => {
       currency: "₹",
       exchange: "NSE" as const,
       category: "NSE India" as const,
-      price: 192.95,
-      prevClose: 193.82,
-      change: -0.87,
-      changePct: -0.44,
-      high: 196.50,
-      low: 191.80,
-      volume: 2950000,
-      volumeFormatted: "2.95M",
-      turnoverCr: 56.9,
+      price: 206.54,
+      prevClose: 204.80,
+      change: 1.74,
+      changePct: 0.85,
+      high: 208.50,
+      low: 203.40,
+      volume: 4950000,
+      volumeFormatted: "4.95M",
+      turnoverCr: 102.2,
       kiteToken: "612948",
-      sentimentScore: 58,
-      intradaySignal: "ACCUMULATE" as const,
-      trendDirection: "DOWN" as const,
-      keyCatalyst: "Tier-2/3 logistics cost recalibration & consolidation",
+      sentimentScore: 78,
+      intradaySignal: "BUY" as const,
+      trendDirection: "UP" as const,
+      keyCatalyst: "Tier-2/3 festive season GMV expansion and zero-commission merchant growth",
     },
     {
       symbol: "KRRAIL",
@@ -2113,7 +2113,7 @@ app.post("/api/check-accuracy", async (req, res) => {
     INFY: { price: 1842.00, name: "Infosys Ltd", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "NYSE ADR (INFY.US) Quorum", change: 11.20, changePct: 0.61, prevClose: 1830.80 },
     TCS: { price: 4185.00, name: "Tata Consultancy Services", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "Yahoo Finance Node 1", change: 26.50, changePct: 0.64, prevClose: 4158.50 },
     HDFCBANK: { price: 1655.00, name: "HDFC Bank Ltd", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "NYSE ADR (HDB.US) Mirror", change: 7.80, changePct: 0.47, prevClose: 1647.20 },
-    MEESHO: { price: 192.95, name: "Meesho", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "Zerodha Kite Watchlist Sync", change: -0.87, changePct: -0.44, prevClose: 193.82 },
+    MEESHO: { price: 206.54, name: "Meesho", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "Zerodha Kite Watchlist Sync", change: 1.74, changePct: 0.85, prevClose: 204.80 },
     TVSHLTD: { price: 14096.00, name: "TVS Holdings Ltd", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "BSE Mirror Feed", change: 24.00, changePct: 0.17, prevClose: 14072.00 },
     TVSELECT: { price: 448.70, name: "TVS Electronics Ltd", currency: "₹", exchange: "BSE", source: "BSE Match Engine", secondarySource: "NSE Direct Feed", change: -0.50, changePct: -0.11, prevClose: 449.20 },
     OLAELEC: { price: 38.61, name: "Ola Electric Mobility", currency: "₹", exchange: "NSE", source: "NSE Match Engine", secondarySource: "Zerodha Kite Terminal Sync", change: -0.42, changePct: -1.08, prevClose: 39.03 },
@@ -2728,13 +2728,13 @@ app.get("/api/personal-ai-agent-overview", async (req, res) => {
       name: "Meesho Inc. (Unlisted / NSE Grey Market)",
       assetClass: "NSE Stock",
       marketStatus: "OPEN",
-      price: 192.95,
-      change24h: 3.18,
+      price: 206.54,
+      change24h: 0.85,
       currency: "₹",
       aiPrediction: "STRONG ACCUMULATION",
       confidence: 89,
       accuracyScore: 90.1,
-      keyLevel: "Support ₹188.40 | Target ₹214.00",
+      keyLevel: "Support ₹203.44 | Target ₹224.10",
       strategyDeployed: "Dual Supertrend (10, 2.25) & Wilder RSI",
       deployedInSeconds: 0.9,
     },

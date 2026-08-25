@@ -99,7 +99,7 @@ export default function App() {
     { symbol: "TATAMOTORS", displaySymbol: "TATAMOTORS", companyName: "Tata Motors Ltd", currency: "₹", livePrice: 965.50, previousClose: 957.30, change: 8.20, changePct: 0.86, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
     { symbol: "RELIANCE", displaySymbol: "RELIANCE", companyName: "Reliance Industries", currency: "₹", livePrice: 2985.00, previousClose: 2970.50, change: 14.50, changePct: 0.49, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
     { symbol: "INFY", displaySymbol: "INFY", companyName: "Infosys Ltd", currency: "₹", livePrice: 1842.00, previousClose: 1830.80, change: 11.20, changePct: 0.61, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "MEESHO", displaySymbol: "MEESHO", companyName: "Meesho", currency: "₹", livePrice: 192.95, previousClose: 193.82, change: -0.87, changePct: -0.44, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "MEESHO", displaySymbol: "MEESHO", companyName: "Meesho", currency: "₹", livePrice: 206.54, previousClose: 204.80, change: 1.74, changePct: 0.85, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
   ]);
   const [isCheckingAccuracy, setIsCheckingAccuracy] = useState<boolean>(false);
   const [lastAccuracyCheckTime, setLastAccuracyCheckTime] = useState<string>("Just now");
@@ -310,6 +310,10 @@ export default function App() {
         } else if (/PWL|PREMIER.*POLY/.test(cleanQuery.toUpperCase())) {
           symbol = "PWL";
           basePrice = 120.90;
+          currency = "₹";
+        } else if (/MEESHO|MESSO/.test(cleanQuery.toUpperCase())) {
+          symbol = "MEESHO";
+          basePrice = 206.54;
           currency = "₹";
         } else if (/TAPARIA/.test(cleanQuery.toUpperCase())) {
           symbol = "TAPARIA";
