@@ -305,10 +305,10 @@ export const TopGainersLosersSection: React.FC<TopGainersLosersSectionProps> = (
                       ) : null}
                       <span>
                         {isGainer ? "+" : ""}
-                        {item.changePct.toFixed(2)}%
+                        {(item.changePct ?? 0).toFixed(2)}%
                       </span>
                       <span className="text-[10px] font-normal opacity-80">
-                        ({isGainer ? "+" : ""}{item.change.toFixed(2)})
+                        ({isGainer ? "+" : ""}{(item.change ?? 0).toFixed(2)})
                       </span>
                     </div>
                   </div>

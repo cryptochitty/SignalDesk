@@ -21,6 +21,7 @@ import {
   Target,
 } from "lucide-react";
 import { PredictionResult } from "../types";
+import { formatCurrentISTTime } from "../utils/timezoneUtils";
 
 interface AppSuccessDashboardProps {
   prediction?: PredictionResult | null;
@@ -35,18 +36,22 @@ export const AppSuccessDashboard: React.FC<AppSuccessDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"accuracy" | "system" | "assets" | "ocr">("accuracy");
   const [isAuditing, setIsAuditing] = useState(false);
-  const [lastAuditTime, setLastAuditTime] = useState<string>("Just now");
+  const [lastAuditTime, setLastAuditTime] = useState<string>(() => formatCurrentISTTime(true));
 
   const backtest = prediction?.backtestMetrics;
-  const directionalWinRate = backtest ? backtest.directionalAccuracy.toFixed(1) : "88.6";
-  const maePct = backtest ? backtest.maePercent.toFixed(2) : "1.84";
+  const directionalWinRate = (backtest && typeof backtest.directionalAccuracy === "number")
+    ? backtest.directionalAccuracy.toFixed(1)
+    : "88.6";
+  const maePct = (backtest && typeof backtest.maePercent === "number")
+    ? backtest.maePercent.toFixed(2)
+    : "1.84";
   const sampleCount = backtest ? backtest.sampleCount : 24;
 
   const handleRunDiagnosticAudit = () => {
     setIsAuditing(true);
     setTimeout(() => {
       setIsAuditing(false);
-      setLastAuditTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setLastAuditTime(formatCurrentISTTime(true));
     }, 1200);
   };
 
@@ -301,16 +306,18 @@ export const AppSuccessDashboard: React.FC<AppSuccessDashboardProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {prediction?.chartData && prediction.chartData.slice(-5).map((point, idx) => {
-                    const actual = point.actualClose || point.forecastPrice || 100;
-                    const pred = point.backtestPred || point.forecastPrice || actual * 0.99;
-                    const variance = Math.abs(((actual - pred) / actual) * 100).toFixed(2);
+                    const actual = Number(point.actualClose || point.forecastPrice || 100);
+                    const pred = Number(point.backtestPred || point.forecastPrice || actual * 0.99);
+                    const variance = (!isNaN(actual) && actual !== 0 && !isNaN(pred))
+                      ? Math.abs(((actual - pred) / actual) * 100).toFixed(2)
+                      : "0.00";
                     const isHit = parseFloat(variance) < 2.5;
 
                     return (
                       <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
                         <td className="py-2 px-3 text-slate-400">{point.date}</td>
-                        <td className="py-2 px-3 font-bold">{currency}{actual.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-indigo-300">{currency}{pred.toFixed(2)}</td>
+                        <td className="py-2 px-3 font-bold">{currency}{(!isNaN(actual) ? actual : 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 text-indigo-300">{currency}{(!isNaN(pred) ? pred : 0).toFixed(2)}</td>
                         <td className="py-2 px-3 text-slate-400">{variance}%</td>
                         <td className="py-2 px-3 text-right">
                           <span

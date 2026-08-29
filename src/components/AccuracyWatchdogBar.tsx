@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { AccuracyQuote, AccuracyCheckConfig } from "../types";
 import { generateStockRecommendation } from "../utils/stockRecommendationEngine";
+import { formatToISTTime, getNSEMarketStatus } from "../utils/timezoneUtils";
 
 interface AccuracyWatchdogBarProps {
   quotes: AccuracyQuote[];
@@ -88,6 +89,9 @@ export const AccuracyWatchdogBar: React.FC<AccuracyWatchdogBarProps> = ({
     return true;
   });
 
+  const marketStatus = getNSEMarketStatus();
+  const istDisplayTime = formatToISTTime(lastCheckedTime);
+
   return (
     <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-3 sm:p-4 shadow-xl space-y-3">
       {/* Top Controls Bar */}
@@ -102,19 +106,32 @@ export const AccuracyWatchdogBar: React.FC<AccuracyWatchdogBarProps> = ({
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wide">
                 Live Price Accuracy & Trade Signals
               </h3>
               <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 100% Exchange Verified
               </span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                marketStatus.isOpen
+                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 animate-pulse"
+                  : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${marketStatus.isOpen ? "bg-emerald-400" : "bg-amber-400"}`}></span>
+                {marketStatus.statusLabel}
+              </span>
             </div>
-            <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <Clock className="w-3 h-3 text-slate-500" />
-              Last Checked: <strong className="text-slate-200 font-mono">{lastCheckedTime || "Just now"}</strong>
+            <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>Last Checked: <strong className="text-slate-100 font-mono">{istDisplayTime}</strong></span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30" title="Indian Standard Time (IST - Asia/Kolkata, UTC+05:30)">
+                IST (Asia/Kolkata)
+              </span>
               <span className="text-slate-600">•</span>
               <span>Delay: <strong className="text-emerald-400 font-mono">0s Real-time</strong></span>
+              <span className="text-slate-600">•</span>
+              <span className="text-[10px] text-slate-400 hidden sm:inline">{marketStatus.sessionDescription}</span>
             </p>
           </div>
         </div>

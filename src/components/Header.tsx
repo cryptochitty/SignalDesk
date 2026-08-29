@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { TrendingUp, Sparkles, ChevronDown, Search, RefreshCw, Bell, FileText, FileSpreadsheet } from "lucide-react";
 import { StockPreset } from "../types";
 import { STOCK_PRESETS } from "../utils/sampleData";
+import { formatCurrentISTTime, getNSEMarketStatus } from "../utils/timezoneUtils";
 
 interface HeaderProps {
   selectedPreset: StockPreset;
@@ -28,7 +29,18 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [headerQuery, setHeaderQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [istTime, setIstTime] = useState<string>(() => formatCurrentISTTime(true));
+  const [marketStatus, setMarketStatus] = useState(() => getNSEMarketStatus());
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Live IST Clock Tick & Market Session Status updater
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIstTime(formatCurrentISTTime(true));
+      setMarketStatus(getNSEMarketStatus());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -262,15 +274,21 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Engine Status Badge */}
-          <div className="hidden xl:flex flex-col items-end pl-3 border-l border-slate-800 text-xs">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-medium text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Engine Online
+          {/* Engine Status & Live IST Market Clock Badge */}
+          <div className="hidden lg:flex flex-col items-end pl-3 border-l border-slate-800 text-xs">
+            <div className="flex items-center gap-1.5 font-medium text-[11px]">
+              <span className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+              <span className={marketStatus.isOpen ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                {marketStatus.statusLabel}
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="font-mono text-slate-100 font-bold">{istTime}</span>
             </div>
-            <span className="text-[10px] text-slate-500 font-mono">
-              Currency: {currency}
-            </span>
+            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+              <span className="text-indigo-400 font-semibold">IST (UTC+5:30)</span>
+              <span>•</span>
+              <span className="text-slate-400">Cur: {currency}</span>
+            </div>
           </div>
         </div>
       </div>

@@ -297,16 +297,16 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
                       <p className="font-semibold text-slate-300 border-b border-slate-800 pb-0.5">{label}</p>
                       <div className="flex justify-between items-center text-slate-200">
                         <span>Price:</span>
-                        <span className="font-mono font-bold text-indigo-400">{currency}{price?.toFixed(2)}</span>
+                        <span className="font-mono font-bold text-indigo-400">{currency}{(price ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center text-amber-300">
                         <span>Target Threshold:</span>
-                        <span className="font-mono font-bold">{currency}{target.toFixed(2)}</span>
+                        <span className="font-mono font-bold">{currency}{(target ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center pt-1 border-t border-slate-800/80 text-[11px]">
                         <span className="text-slate-400">Distance to Target:</span>
                         <span className={`font-mono font-bold ${diff >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {diff >= 0 ? "+" : ""}{currency}{diff.toFixed(2)} ({diffPct >= 0 ? "+" : ""}{diffPct.toFixed(2)}%)
+                          {diff >= 0 ? "+" : ""}{currency}{(diff ?? 0).toFixed(2)} ({diffPct >= 0 ? "+" : ""}{(diffPct ?? 0).toFixed(2)}%)
                         </span>
                       </div>
                     </div>
@@ -590,7 +590,7 @@ export const PriceThresholdCard: React.FC<PriceThresholdCardProps> = ({
         signal={condition === "falls_below" ? "SELL" : "BUY"}
         exchange={currency === "$" ? "Crypto DEX (Hyperliquid)" : "NSE"}
         timeframe="Live Alert Threshold"
-        catalystSummary={`Price monitor threshold: ${currency}${targetPrice.toFixed(2)} (${condition === "exceeds" ? "Upside Breakout" : "Downside Defense"}) • Forecast: ${currency}${predictedPrice?.toFixed(2) || currentPrice.toFixed(2)}`}
+        catalystSummary={`Price monitor threshold: ${currency}${(targetPrice ?? 0).toFixed(2)} (${condition === "exceeds" ? "Upside Breakout" : "Downside Defense"}) • Forecast: ${currency}${predictedPrice !== undefined ? predictedPrice.toFixed(2) : (currentPrice ?? 0).toFixed(2)}`}
       />
     </div>
   );

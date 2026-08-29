@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Secure user profile
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Secure user portfolio holdings
+      match /holdings/{holdingId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) && request.resource.data.userId == userId;
+        allow delete: if isOwner(userId);
+      }
+
+      // Secure portfolio snapshots
+      match /snapshots/{snapshotId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) && request.resource.data.userId == userId;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

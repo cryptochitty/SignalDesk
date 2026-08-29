@@ -28,6 +28,7 @@ import {
   AiAgentLearningMemory,
   AiAgentAssetScan,
 } from "../types";
+import { formatCurrentISTTime } from "../utils/timezoneUtils";
 
 interface PersonalAiAgentDeskProps {
   currentSymbol: string;
@@ -359,7 +360,7 @@ export const PersonalAiAgentDesk: React.FC<PersonalAiAgentDeskProps> = ({
     const userMsg = {
       sender: "USER" as const,
       text: query,
-      time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      time: formatCurrentISTTime(false),
     };
     setChatMessages((prev) => [...prev, userMsg]);
     setChatInput("");
@@ -384,7 +385,7 @@ export const PersonalAiAgentDesk: React.FC<PersonalAiAgentDeskProps> = ({
           {
             sender: "AI" as const,
             text: data.answer,
-            time: data.timestamp || "Now",
+            time: data.timestamp || formatCurrentISTTime(false),
           },
         ]);
       } else {
@@ -396,7 +397,7 @@ export const PersonalAiAgentDesk: React.FC<PersonalAiAgentDeskProps> = ({
         {
           sender: "AI" as const,
           text: `• **Personal AI Agent Analysis for ${currentSymbol}**:\n• Current market position evaluated with 92.4% historical model accuracy.\n• **Downside Shield**: Stop-loss bracket strictly enforced 3.2% below current price (${currency}${(currentPrice * 0.968).toFixed(2)}).\n• **Profit Schedule**: Lock 40% gain when target 1 at ${currency}${(currentPrice * 1.042).toFixed(2)} is reached.`,
-          time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          time: formatCurrentISTTime(false),
         },
       ]);
     } finally {

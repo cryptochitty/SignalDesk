@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { DataSourceHealth, AccuracyQuote } from "../types";
+import { formatToISTTime, formatCurrentISTTime } from "../utils/timezoneUtils";
 
 interface MultiSourceDataHealthHubProps {
   quotes: AccuracyQuote[];
@@ -45,11 +46,11 @@ export const MultiSourceDataHealthHub: React.FC<MultiSourceDataHealthHubProps> =
         const data = await res.json();
         setProviders(data.providers || []);
         setQuorumRate(data.activeQuorumAgreementPct || 99.98);
-        setLastRefreshed(data.displayTime || new Date().toLocaleTimeString());
+        setLastRefreshed(formatToISTTime(data.displayTime || data.checkedAt));
       }
     } catch (_err) {
       // Fallback
-      setLastRefreshed(new Date().toLocaleTimeString());
+      setLastRefreshed(formatCurrentISTTime(true));
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +108,13 @@ export const MultiSourceDataHealthHub: React.FC<MultiSourceDataHealthHubProps> =
             <span className="text-slate-400">Consensus Rate:</span>
             <strong className="text-emerald-300 font-bold">{quorumRate}%</strong>
           </div>
+
+          {lastRefreshed && (
+            <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 text-xs font-mono">
+              <span className="text-slate-400">IST:</span>
+              <strong className="text-indigo-300 font-bold">{lastRefreshed}</strong>
+            </div>
+          )}
 
           {/* Ping All Button */}
           <button
@@ -177,7 +185,7 @@ export const MultiSourceDataHealthHub: React.FC<MultiSourceDataHealthHubProps> =
                       {activeQuote.currency}{s.price.toLocaleString()}
                     </span>
                     <span className="text-[10px] font-mono text-emerald-400">
-                      ±{s.deviationPct.toFixed(2)}%
+                      ±{(s.deviationPct ?? 0).toFixed(2)}%
                     </span>
                   </div>
                   <div className="text-[9px] text-slate-500 flex items-center justify-between pt-0.5">

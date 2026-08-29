@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { formatCurrentISTTime } from "../utils/timezoneUtils";
 import { PredictionResult, SentimentAnalysisData, StockPreset, QuantitativeConfig } from "../types";
 import { SAMPLE_MUTUAL_FUNDS } from "../utils/mutualFundData";
 import { STOCK_PRESETS } from "../utils/sampleData";
@@ -115,10 +116,7 @@ export const PdfReportGeneratorModal: React.FC<PdfReportGeneratorModalProps> = (
     day: "numeric",
   });
 
-  const timeStr = new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timeStr = formatCurrentISTTime(false);
 
   // Calculate exact, 100% verified stats for Section 1 & Section 2
   const currentPrice = activePred?.currentPrice ?? activePred?.lastClose ?? 0;

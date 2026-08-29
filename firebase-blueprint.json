@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "type": "object",
+      "description": "User profile with authentication and role information",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User avatar URL" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "PortfolioHolding": {
+      "title": "PortfolioHolding",
+      "type": "object",
+      "description": "Encrypted user portfolio holding with quant targets and trade signals",
+      "properties": {
+        "id": { "type": "string", "description": "Unique holding ID" },
+        "userId": { "type": "string", "description": "Owner Firebase UID" },
+        "symbol": { "type": "string", "description": "Stock / ETF ticker symbol" },
+        "companyName": { "type": "string", "description": "Full company / instrument name" },
+        "quantity": { "type": "number", "description": "Total units held" },
+        "averagePrice": { "type": "number", "description": "Buy average price per share" },
+        "lastPrice": { "type": "number", "description": "Current LTP" },
+        "currentValue": { "type": "number", "description": "Total market value" },
+        "pnl": { "type": "number", "description": "Net unrealized profit/loss in INR" },
+        "pnlPercentage": { "type": "number", "description": "Net unrealized P&L percentage" },
+        "assetType": { "type": "string", "description": "Equity, ETF, Pre-IPO, Crypto" },
+        "sector": { "type": "string", "description": "Market sector" },
+        "targetPrice": { "type": "number", "description": "Algorithmic target price" },
+        "stopLossPrice": { "type": "number", "description": "Algorithmic stop loss price" },
+        "actionSignal": { "type": "string", "description": "Buy, Accumulate, Hold, Trim" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "symbol", "quantity", "averagePrice"]
+    },
+    "PortfolioSnapshot": {
+      "title": "PortfolioSnapshot",
+      "type": "object",
+      "description": "Historical portfolio total value and analytics snapshot",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "totalInvestment": { "type": "number" },
+        "currentValue": { "type": "number" },
+        "totalPnl": { "type": "number" },
+        "totalPnlPercentage": { "type": "number" },
+        "holdingsCount": { "type": "number" },
+        "syncedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "totalInvestment", "currentValue"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document restricted to the user themselves"
+    },
+    "/users/{userId}/holdings/{holdingId}": {
+      "schema": "PortfolioHolding",
+      "description": "User-isolated portfolio holdings secure subcollection"
+    },
+    "/users/{userId}/snapshots/{snapshotId}": {
+      "schema": "PortfolioSnapshot",
+      "description": "User portfolio synchronization history and snapshots"
+    }
+  }
+}

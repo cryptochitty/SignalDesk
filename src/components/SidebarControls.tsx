@@ -175,7 +175,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
           <div className="flex justify-between text-xs font-medium text-slate-300">
             <span>Moving Average (MA)</span>
             <span className="font-mono text-indigo-400 font-bold">
-              {(config.weights.ma * 100).toFixed(0)}%
+              {((config?.weights?.ma ?? 0.35) * 100).toFixed(0)}%
             </span>
           </div>
           <input
@@ -183,7 +183,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
             min={0}
             max={1}
             step={0.05}
-            value={config.weights.ma}
+            value={config?.weights?.ma ?? 0.35}
             onChange={(e) => handleWeightChange("ma", parseFloat(e.target.value))}
             className="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5"
           />
@@ -194,7 +194,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
           <div className="flex justify-between text-xs font-medium text-slate-300">
             <span>Linear Regression Trend</span>
             <span className="font-mono text-indigo-400 font-bold">
-              {(config.weights.regression * 100).toFixed(0)}%
+              {((config?.weights?.regression ?? 0.35) * 100).toFixed(0)}%
             </span>
           </div>
           <input
@@ -202,7 +202,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
             min={0}
             max={1}
             step={0.05}
-            value={config.weights.regression}
+            value={config?.weights?.regression ?? 0.35}
             onChange={(e) => handleWeightChange("regression", parseFloat(e.target.value))}
             className="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5"
           />
@@ -213,7 +213,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
           <div className="flex justify-between text-xs font-medium text-slate-300">
             <span>Momentum Velocity</span>
             <span className="font-mono text-indigo-400 font-bold">
-              {(config.weights.momentum * 100).toFixed(0)}%
+              {((config?.weights?.momentum ?? 0.15) * 100).toFixed(0)}%
             </span>
           </div>
           <input
@@ -221,7 +221,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
             min={0}
             max={1}
             step={0.05}
-            value={config.weights.momentum}
+            value={config?.weights?.momentum ?? 0.15}
             onChange={(e) => handleWeightChange("momentum", parseFloat(e.target.value))}
             className="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5"
           />
@@ -232,7 +232,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
           <div className="flex justify-between text-xs font-medium text-slate-300">
             <span>Social Sentiment Bias</span>
             <span className="font-mono text-indigo-400 font-bold">
-              {(config.weights.sentiment * 100).toFixed(0)}%
+              {((config?.weights?.sentiment ?? 0.15) * 100).toFixed(0)}%
             </span>
           </div>
           <input
@@ -240,7 +240,7 @@ export const SidebarControls: React.FC<SidebarControlsProps> = ({
             min={0}
             max={1}
             step={0.05}
-            value={config.weights.sentiment}
+            value={config?.weights?.sentiment ?? 0.15}
             onChange={(e) => handleWeightChange("sentiment", parseFloat(e.target.value))}
             className="w-full accent-indigo-500 bg-slate-800 rounded-lg cursor-pointer h-1.5"
           />

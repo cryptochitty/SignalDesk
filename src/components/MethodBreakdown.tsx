@@ -68,7 +68,7 @@ export const MethodBreakdown: React.FC<MethodBreakdownProps> = ({
       const data = await res.json();
       setAiSummary(data.summary);
     } catch (err) {
-      console.error(err);
+      console.warn("Notice: Generating AI commentary via local quant metrics:", err);
       const probeStr = wm ? `\n• Probe Midpoint: ${currency}${wm.executionProtocol.probeLevel} | Add Breakout: ${currency}${wm.executionProtocol.addLevel} | Invalidation: ${currency}${wm.executionProtocol.invalidationLevel}` : "";
       setAiSummary(
         `• Quantitative convergence observed around ${currency}${prediction.nextClose} target.\n• Model backtesting reflects a historical mean error of ${prediction.backtestMetrics.maePercent}%.\n• Supertrend Weekly (ATR 10 / Factor 2.25) is ${wm?.supertrend.direction || "BULLISH"}.${probeStr}\n• Maintain strict risk stop-loss bounds near ${currency}${prediction.lowBand}.`
@@ -401,7 +401,7 @@ export const MethodBreakdown: React.FC<MethodBreakdownProps> = ({
                 <span className="text-slate-500 font-mono">Factor</span>
               </div>
               <p className="text-lg font-bold text-emerald-400 font-mono">
-                {sentimentData ? `${sentimentData.sentimentMultiplier.toFixed(2)}x` : "1.00x"}
+                {typeof sentimentData?.sentimentMultiplier === "number" ? `${sentimentData.sentimentMultiplier.toFixed(2)}x` : "1.00x"}
               </p>
               <p className="text-[10px] text-slate-500">Market chatter bias</p>
             </div>

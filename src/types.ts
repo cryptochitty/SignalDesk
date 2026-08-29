@@ -594,3 +594,113 @@ export interface GroundedNewsData {
   headlines: GroundedNewsHeadline[];
 }
 
+export interface KitePortfolioHolding {
+  id: string;
+  symbol: string;
+  name: string;
+  companyName: string;
+  exchange: 'NSE' | 'BSE';
+  quantity: number;
+  t1Quantity?: number;
+  averagePrice: number;
+  investedAmount: number;
+  ltp: number;
+  dayChange: number;
+  dayChangePct: number;
+  pnl: number;
+  pnlPct: number;
+  assetClass: 'Equities' | 'Pre-IPO' | 'Commodity & Silver ETFs';
+  kiteToken?: string;
+  aiSignal?: 'ACCUMULATE' | 'HOLD' | 'PROBE HEDGE' | 'TAKE PROFIT' | 'STOP LOSS INVAL';
+  keySupport?: number;
+  keyTarget?: number;
+}
+
+export interface KitePortfolioPosition {
+  id: string;
+  symbol: string;
+  name: string;
+  exchange: 'NSE' | 'BSE';
+  quantity: number;
+  product: 'CNC' | 'MIS' | 'NRML';
+  positionType: 'SOLD HOLDING' | 'HOLDING' | 'INTRADAY';
+  averagePrice: number;
+  ltp: number;
+  pnl: number;
+  pnlPct?: number;
+  dayChangePct?: number;
+  kiteToken?: string;
+  aiRecommendation?: string;
+}
+
+export interface DailyProfitAction {
+  id: string;
+  symbol: string;
+  name: string;
+  type: 'BOOK_PROFIT' | 'TRAIL_STOP' | 'ACCUMULATE_DIP' | 'REBALANCE_HEDGE' | 'HARVEST_TAX_LOSS' | string;
+  urgency: 'HIGH' | 'MEDIUM' | 'OPPORTUNITY' | string;
+  sessionTime: '09:15 AM (Open)' | '11:00 AM (Morning)' | '12:30 PM (Mid-Day)' | '02:00 PM (Afternoon)' | '03:15 PM (EOD)' | string;
+  title: string;
+  description: string;
+  triggerPrice: number;
+  currentPrice: number;
+  targetPrice?: number;
+  projectedProfitImpact: string;
+  status: 'PENDING' | 'EXECUTED' | 'DISMISSED';
+  isExecuted?: boolean;
+}
+
+export interface DailyPortfolioSnapshot {
+  id: string;
+  date: string;
+  dayLabel: string;
+  totalInvested: number;
+  currentValue: number;
+  dayPnl: number;
+  dayPnlPct: number;
+  cumulativePnl: number;
+  cumulativePnlPct: number;
+  topGainer: string;
+  topDrag: string;
+  profitEnhancedDelta: number;
+  notes: string;
+  actionsTakenCount: number;
+}
+
+export interface ProfitEnhancementScorecard {
+  enhancementScore: number; // 0 - 100
+  potentialMonthlyAlpha: number; // in INR
+  currentDrawdownRisk: 'LOW' | 'MODERATE' | 'CRITICAL';
+  capitalEfficiencyPct: number;
+  topActionableSuggestion: string;
+  diversificationScore: number;
+  profitProtectionHealth: number;
+}
+
+export interface KitePortfolioOverview {
+  totalInvested: number;
+  currentValue: number;
+  totalPnl: number;
+  totalPnlPct: number;
+  daysPnl: number;
+  positionsPnl: number;
+  holdingsCount: number;
+  positionsCount: number;
+  nifty50: { price: number; change: number; changePct: number };
+  niftyBank: { price: number; change: number; changePct: number };
+  holdings: KitePortfolioHolding[];
+  positions: KitePortfolioPosition[];
+  portfolioRiskMetrics?: {
+    silverConcentrationPct: number;
+    riskLevel: string;
+    recommendedAction: string;
+    highestGainerToday: string;
+    topHoldingByValue: string;
+  };
+  dailyActionPlans?: DailyProfitAction[];
+  snapshotHistory?: DailyPortfolioSnapshot[];
+  enhancementScorecard?: ProfitEnhancementScorecard;
+  lastSyncedAt?: string;
+  nextAutoSyncSeconds?: number;
+}
+

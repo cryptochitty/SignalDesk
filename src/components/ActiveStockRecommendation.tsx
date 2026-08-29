@@ -75,14 +75,14 @@ export const ActiveStockRecommendation: React.FC<ActiveStockRecommendationProps>
   const lossAtSL = ((price - stopLoss) * positionQty).toFixed(2);
 
   const kiteWatchlistItems = [
-    { symbol: "URBANCO", name: "Urban Company", price: 145.49, change: "-1.58%", exchange: "NSE" },
+    { symbol: "URBANCO", name: "Urban Company", price: 158.60, change: "+9.01%", exchange: "NSE" },
     { symbol: "HCC", name: "HCC Ltd", price: 21.22, change: "+7.00%", exchange: "NSE" },
     { symbol: "BEPL", name: "Bhansali Eng", price: 123.23, change: "+3.51%", exchange: "NSE" },
-    { symbol: "PINELABS", name: "Pine Labs", price: 159.73, change: "+1.33%", exchange: "NSE" },
-    { symbol: "MOSCHIP", name: "MosChip", price: 206.31, change: "+0.03%", exchange: "NSE" },
-    { symbol: "IOC", name: "Indian Oil", price: 135.90, change: "-0.47%", exchange: "BSE" },
-    { symbol: "KRRAIL", name: "KR Rail", price: 22.70, change: "-0.83%", exchange: "BSE" },
-    { symbol: "PWL", name: "Premier Poly", price: 122.15, change: "+0.12%", exchange: "BSE" },
+    { symbol: "PINELABS", name: "Pine Labs", price: 156.91, change: "+1.36%", exchange: "NSE" },
+    { symbol: "MOSCHIP", name: "MosChip", price: 206.31, change: "+0.69%", exchange: "NSE" },
+    { symbol: "IOC", name: "Indian Oil", price: 136.00, change: "+0.07%", exchange: "BSE" },
+    { symbol: "KRRAIL", name: "KR Rail", price: 22.56, change: "-0.66%", exchange: "BSE" },
+    { symbol: "PWL", name: "Premier Poly", price: 129.25, change: "+6.51%", exchange: "BSE" },
     { symbol: "TAPARIA", name: "Taparia Tools", price: 12.14, change: "0.00%", exchange: "BSE" },
     { symbol: "TATAMOTORS", name: "Tata Motors", price: 965.50, change: "+0.86%", exchange: "NSE" },
     { symbol: "RELIANCE", name: "Reliance", price: 2985.00, change: "+0.49%", exchange: "NSE" },

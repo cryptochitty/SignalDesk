@@ -53,18 +53,17 @@ export const TwitterSocialFeed: React.FC<TwitterSocialFeedProps> = ({
   const [postSuccess, setPostSuccess] = useState(false);
 
   const safeSentiment: SentimentAnalysisData = sentimentData || {
+    symbol: stockSymbol,
     score: 65,
     label: "Bullish",
     sentimentMultiplier: 1.04,
-    bullishPercentage: 75,
-    bearishPercentage: 25,
-    sampleCount: 1200,
     keyDrivers: [
       "Volume expansion & whale accumulation",
       "Positive institutional sentiment flow",
       "Technical momentum alignment",
     ],
-    trendingTopics: ["#Stocks", "#Quant", "#Bullish"],
+    summary: `Positive social buzz detected for ${stockSymbol}. Accumulation signals dominating retail and institutional discussion threads.`,
+    samplePosts: [],
   };
 
   // Generate dynamic Twitter/X feed items based on stock symbol & sentiment

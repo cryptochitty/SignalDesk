@@ -222,10 +222,10 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({ prediction, currency, on
                 }`}
               >
                 {currentDivergencePct > 0 ? "+" : ""}
-                {currentDivergencePct.toFixed(2)}%
+                {(currentDivergencePct ?? 0).toFixed(2)}%
               </span>
               <span className="text-slate-400 ml-2">
-                (Deviation Threshold: ±{divergenceThresholdPct}%)
+                (Deviation Threshold: ±{(divergenceThresholdPct ?? 1.5).toFixed(1)}%)
               </span>
             </div>
           </div>
