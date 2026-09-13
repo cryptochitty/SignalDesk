@@ -89,17 +89,17 @@ export default function App() {
 
   // Continuous Accuracy Watchdog State
   const [accuracyQuotes, setAccuracyQuotes] = useState<AccuracyQuote[]>([
-    { symbol: "SILVERCASE", displaySymbol: "SILVERCASE", companyName: "Silver ETF / Case Bullion Fund", currency: "₹", livePrice: 24.03, previousClose: 24.44, change: -0.41, changePct: -1.68, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "SILVERBEES", displaySymbol: "SILVERBEES", companyName: "Nippon India Silver BeES ETF", currency: "₹", livePrice: 226.34, previousClose: 230.16, change: -3.82, changePct: -1.66, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "SILVER1", displaySymbol: "SILVER1", companyName: "Silver 1 Commodity ETF", currency: "₹", livePrice: 22.97, previousClose: 23.37, change: -0.40, changePct: -1.71, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "CANHLIFE", displaySymbol: "CANHLIFE", companyName: "Canara HSBC Life / Robeco", currency: "₹", livePrice: 156.89, previousClose: 156.94, change: -0.05, changePct: -0.03, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "MOSCHIP", displaySymbol: "MOSCHIP", companyName: "MosChip Technologies", currency: "₹", livePrice: 219.35, previousClose: 205.60, change: 13.75, changePct: 6.69, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "PINELABS", displaySymbol: "PINELABS", companyName: "Pine Labs", currency: "₹", livePrice: 169.67, previousClose: 172.00, change: -2.33, changePct: -1.35, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "PWL", displaySymbol: "PWL", companyName: "Premier Polyfilm (PWL)", currency: "₹", livePrice: 124.09, previousClose: 126.13, change: -2.04, changePct: -1.62, exchange: "BSE", source: "BSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "MEESHO", displaySymbol: "MEESHO", companyName: "Meesho", currency: "₹", livePrice: 207.64, previousClose: 208.14, change: -0.50, changePct: -0.24, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "URBANCO", displaySymbol: "URBANCO", companyName: "Urban Company", currency: "₹", livePrice: 158.60, previousClose: 145.49, change: 13.11, changePct: 9.01, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "HCC", displaySymbol: "HCC", companyName: "Hindustan Construction Co", currency: "₹", livePrice: 21.22, previousClose: 19.83, change: 1.39, changePct: 7.00, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
-    { symbol: "BEPL", displaySymbol: "BEPL", companyName: "Bhansali Engineering Polymers", currency: "₹", livePrice: 123.23, previousClose: 119.05, change: 4.18, changePct: 3.51, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "SILVERCASE", displaySymbol: "SILVERCASE", companyName: "Silver ETF / Case Bullion Fund", currency: "₹", livePrice: 23.60, previousClose: 23.30, change: 0.30, changePct: 1.29, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "SILVERBEES", displaySymbol: "SILVERBEES", companyName: "Nippon India Silver BeES ETF", currency: "₹", livePrice: 222.59, previousClose: 219.88, change: 2.71, changePct: 1.23, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "SILVER1", displaySymbol: "SILVER1", companyName: "Silver 1 Commodity ETF", currency: "₹", livePrice: 22.61, previousClose: 22.28, change: 0.33, changePct: 1.48, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "CANHLIFE", displaySymbol: "CANHLIFE", companyName: "Canara HSBC Life / Robeco", currency: "₹", livePrice: 149.49, previousClose: 154.31, change: -4.82, changePct: -3.12, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "MOSCHIP", displaySymbol: "MOSCHIP", companyName: "MosChip Technologies", currency: "₹", livePrice: 211.41, previousClose: 205.60, change: 5.81, changePct: 2.83, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "PINELABS", displaySymbol: "PINELABS", companyName: "Pine Labs", currency: "₹", livePrice: 175.08, previousClose: 156.50, change: 18.58, changePct: 11.87, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "PWL", displaySymbol: "PWL", companyName: "Premier Polyfilm (PWL)", currency: "₹", livePrice: 125.40, previousClose: 120.55, change: 4.85, changePct: 4.02, exchange: "BSE", source: "BSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "MEESHO", displaySymbol: "MEESHO", companyName: "Meesho", currency: "₹", livePrice: 216.70, previousClose: 209.74, change: 6.96, changePct: 3.32, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "URBANCO", displaySymbol: "URBANCO", companyName: "Urban Company Ltd", currency: "₹", livePrice: 164.88, previousClose: 171.59, change: -6.71, changePct: -3.91, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "HCC", displaySymbol: "HCC", companyName: "Hindustan Construction Co", currency: "₹", livePrice: 23.43, previousClose: 22.50, change: 0.93, changePct: 4.13, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
+    { symbol: "BEPL", displaySymbol: "BEPL", companyName: "Bhansali Engineering Polymers", currency: "₹", livePrice: 133.56, previousClose: 129.50, change: 4.06, changePct: 3.14, exchange: "NSE", source: "NSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
     { symbol: "IOC", displaySymbol: "IOC", companyName: "Indian Oil Corporation", currency: "₹", livePrice: 136.00, previousClose: 135.90, change: 0.10, changePct: 0.07, exchange: "BSE", source: "BSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
     { symbol: "KRRAIL", displaySymbol: "KRRAIL", companyName: "Konkan Railway (KR Rail)", currency: "₹", livePrice: 22.56, previousClose: 22.71, change: -0.15, changePct: -0.66, exchange: "BSE", source: "BSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
     { symbol: "TAPARIA", displaySymbol: "TAPARIA", companyName: "Taparia Tools Ltd", currency: "₹", livePrice: 12.14, previousClose: 12.14, change: 0.00, changePct: 0.00, exchange: "BSE", source: "BSE Match Engine", lastCheckedTime: "Live", dataAgeSeconds: 0, isAccurate: true, accuracyScore: 100, status: "VERIFIED_LTP" },
@@ -294,7 +294,7 @@ export default function App() {
 
         if (/URBAN|URBANCO|URBANCOMPANY/.test(cleanQuery.toUpperCase())) {
           symbol = "URBANCO";
-          basePrice = 158.60;
+          basePrice = 164.88;
           currency = "₹";
         } else if (/MOSCHIP/.test(cleanQuery.toUpperCase())) {
           symbol = "MOSCHIP";
@@ -592,8 +592,8 @@ export default function App() {
       if (!data || !data.rows || data.rows.length === 0) {
         const fname = file.name.toUpperCase();
         let sym = "URBANCO";
-        let cname = "Urban Company";
-        let baseP = 142.24;
+        let cname = "Urban Company Ltd";
+        let baseP = 164.88;
         let curr = "₹";
 
         if (fname.includes("REDINGTON")) {

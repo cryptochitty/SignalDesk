@@ -57,11 +57,11 @@ export const STOCK_PRESETS: StockPreset[] = [
   {
     id: "urbanco-nse",
     symbol: "URBANCO",
-    name: "Urban Company",
-    companyName: "Urban Company (NSE)",
+    name: "Urban Company Ltd",
+    companyName: "Urban Company Ltd (NSE)",
     currency: "₹",
     category: "Kite Watchlist",
-    csvData: generate6MonthSeries(124.50, 158.60, 101),
+    csvData: generate6MonthSeries(124.50, 164.88, 101),
   },
   {
     id: "silvercase-fund",
@@ -70,7 +70,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Silver ETF / Case Bullion Fund",
     currency: "₹",
     category: "Commodities & ETFs",
-    csvData: generate6MonthSeries(28.40, 24.03, 112),
+    csvData: generate6MonthSeries(28.40, 23.60, 112),
   },
   {
     id: "silverbees-etf",
@@ -79,7 +79,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Nippon India ETF Silver BeES (NSE)",
     currency: "₹",
     category: "Commodities & ETFs",
-    csvData: generate6MonthSeries(248.00, 226.34, 113),
+    csvData: generate6MonthSeries(248.00, 222.59, 113),
   },
   {
     id: "silver1-etf",
@@ -88,7 +88,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Silver 1 Commodity ETF (NSE)",
     currency: "₹",
     category: "Commodities & ETFs",
-    csvData: generate6MonthSeries(25.80, 22.97, 114),
+    csvData: generate6MonthSeries(25.80, 22.61, 114),
   },
   {
     id: "canhlife-nse",
@@ -97,7 +97,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Canara HSBC Life Insurance / Robeco",
     currency: "₹",
     category: "Kite Watchlist",
-    csvData: generate6MonthSeries(142.00, 156.89, 115),
+    csvData: generate6MonthSeries(142.00, 149.49, 115),
   },
   {
     id: "moschip-nse",
@@ -106,7 +106,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "MosChip Technologies Ltd (NSE)",
     currency: "₹",
     category: "Kite Watchlist",
-    csvData: generate6MonthSeries(165.00, 219.35, 105),
+    csvData: generate6MonthSeries(165.00, 211.41, 105),
   },
   {
     id: "pinelabs-nse",
@@ -115,7 +115,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Pine Labs (NSE Pre-IPO)",
     currency: "₹",
     category: "Kite Watchlist",
-    csvData: generate6MonthSeries(134.00, 169.67, 104),
+    csvData: generate6MonthSeries(134.00, 175.08, 104),
   },
   {
     id: "pwl-bse",
@@ -124,7 +124,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Premier Polyfilm Ltd (BSE)",
     currency: "₹",
     category: "Kite Watchlist",
-    csvData: generate6MonthSeries(105.00, 124.09, 108),
+    csvData: generate6MonthSeries(105.00, 125.40, 108),
   },
   {
     id: "meesho-nse",
@@ -133,7 +133,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Meesho (NSE / Pre-IPO)",
     currency: "₹",
     category: "NSE India",
-    csvData: generate6MonthSeries(184.50, 207.64, 505),
+    csvData: generate6MonthSeries(184.50, 216.70, 505),
   },
   {
     id: "tvshltd-nse",
@@ -160,7 +160,7 @@ export const STOCK_PRESETS: StockPreset[] = [
     companyName: "Nifty 50 Index (National Stock Exchange of India)",
     currency: "₹",
     category: "Indices",
-    csvData: generate6MonthSeries(23400.00, 24231.85, 808),
+    csvData: generate6MonthSeries(23400.00, 23431.50, 808),
   },
   {
     id: "nvda-tech",

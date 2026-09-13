@@ -75,7 +75,7 @@ export const ActiveStockRecommendation: React.FC<ActiveStockRecommendationProps>
   const lossAtSL = ((price - stopLoss) * positionQty).toFixed(2);
 
   const kiteWatchlistItems = [
-    { symbol: "URBANCO", name: "Urban Company", price: 158.60, change: "+9.01%", exchange: "NSE" },
+    { symbol: "URBANCO", name: "Urban Company Ltd", price: 164.88, change: "-3.91%", exchange: "NSE" },
     { symbol: "HCC", name: "HCC Ltd", price: 21.22, change: "+7.00%", exchange: "NSE" },
     { symbol: "BEPL", name: "Bhansali Eng", price: 123.23, change: "+3.51%", exchange: "NSE" },
     { symbol: "PINELABS", name: "Pine Labs", price: 156.91, change: "+1.36%", exchange: "NSE" },

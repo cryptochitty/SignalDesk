@@ -274,6 +274,7 @@ export interface DailyRecommendation {
   rationale: string;
   category: string;
   keyCatalysts: string[];
+  confidenceScore?: number; // 0-100%
 }
 
 export interface StockPreset {
@@ -677,6 +678,27 @@ export interface ProfitEnhancementScorecard {
   profitProtectionHealth: number;
 }
 
+export interface SyncHistoryRecord {
+  id: string;
+  timestamp: string;
+  isoTimestamp?: string;
+  timeAgo?: string;
+  holdingsCount: number;
+  positionsCount?: number;
+  syncMethod: 'SCREENSHOT_OCR' | 'TERMINAL_SYNC' | 'AUTO_REFRESH' | 'MANUAL_REFRESH' | 'PORTFOLIO_IMPORT';
+  syncMethodLabel: string;
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  totalInvested: number;
+  currentValue: number;
+  daysPnl: number;
+  nifty50Price?: number;
+  niftyBankPrice?: number;
+  syncedHoldingsSymbols?: string[];
+  latencyMs?: number;
+  freshnessStatus?: 'FRESH' | 'UP_TO_DATE' | 'ARCHIVED';
+  sourceNote?: string;
+}
+
 export interface KitePortfolioOverview {
   totalInvested: number;
   currentValue: number;
@@ -702,5 +724,8 @@ export interface KitePortfolioOverview {
   enhancementScorecard?: ProfitEnhancementScorecard;
   lastSyncedAt?: string;
   nextAutoSyncSeconds?: number;
+  syncHistory?: SyncHistoryRecord[];
+  mode?: 'LIVE_EXCHANGE' | 'TERMINAL_SNAPSHOT';
+  dataSource?: string;
 }
 

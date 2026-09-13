@@ -39,8 +39,48 @@ interface DailyRecommendationsProps {
   activeQuantTargetPrice?: number;
 }
 
-type SortOption = "rank" | "return_desc" | "return_asc" | "risk_asc" | "signal";
+type SortOption = "confidence_desc" | "confidence_asc" | "return_desc" | "return_asc" | "risk_asc" | "signal";
 type MainTab = "ranked_picks" | "active_deepdive" | "portfolio_signals";
+
+// Helper: Calculate or extract deterministic Confidence Score (0-100%)
+const getConfidenceScore = (rec: DailyRecommendation): number => {
+  if (typeof rec.confidenceScore === "number" && !isNaN(rec.confidenceScore) && rec.confidenceScore > 0) {
+    return Math.min(99, Math.max(50, Math.round(rec.confidenceScore)));
+  }
+  // Deterministic fallback based on signal, risk, and expected return
+  const signalMap: Record<string, number> = {
+    "STRONG BUY": 92,
+    BUY: 87,
+    ACCUMULATE: 83,
+    HOLD: 76,
+    WATCH: 68,
+  };
+  const base = signalMap[rec.signal] || 82;
+  const riskAdj = rec.riskLevel === "Low" ? 3 : rec.riskLevel === "High" ? -4 : 0;
+  const returnAdj = Math.min(4, Math.max(-4, Math.round((rec.expectedReturnPct - 8) * 0.35)));
+  return Math.min(98, Math.max(55, base + riskAdj + returnAdj));
+};
+
+// Helper: Deduplicate recommendation list by ticker symbol (retaining item with higher confidence score)
+const deduplicateRecommendations = (list: DailyRecommendation[]): DailyRecommendation[] => {
+  if (!Array.isArray(list)) return [];
+  const map = new Map<string, DailyRecommendation>();
+  for (const item of list) {
+    if (!item || !item.symbol) continue;
+    const key = item.symbol.trim().toUpperCase();
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, item);
+    } else {
+      const existingScore = getConfidenceScore(existing);
+      const currentScore = getConfidenceScore(item);
+      if (currentScore > existingScore) {
+        map.set(key, item);
+      }
+    }
+  }
+  return Array.from(map.values());
+};
 
 export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
   onSelectStock,
@@ -51,13 +91,13 @@ export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
   activeSentimentScore = 65,
   activeQuantTargetPrice,
 }) => {
-  const [recommendations, setRecommendations] = useState<DailyRecommendation[]>(
-    DEFAULT_DAILY_RECOMMENDATIONS
+  const [recommendations, setRecommendations] = useState<DailyRecommendation[]>(() =>
+    deduplicateRecommendations(DEFAULT_DAILY_RECOMMENDATIONS)
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [sortBy, setSortBy] = useState<SortOption>("rank");
+  const [sortBy, setSortBy] = useState<SortOption>("confidence_desc");
   const [selectedRecModal, setSelectedRecModal] = useState<DailyRecommendation | null>(null);
   const [currentTab, setCurrentTab] = useState<MainTab>("ranked_picks");
 
@@ -79,11 +119,12 @@ export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
       if (res.ok) {
         const data = await res.json();
         if (data.recommendations && data.recommendations.length > 0) {
-          setRecommendations(data.recommendations);
+          setRecommendations(deduplicateRecommendations(data.recommendations));
         }
       }
     } catch (err) {
       console.warn("Using default daily recommendations:", err);
+      setRecommendations(deduplicateRecommendations(DEFAULT_DAILY_RECOMMENDATIONS));
     } finally {
       setLoading(false);
     }
@@ -121,18 +162,19 @@ export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
   const profitAtT2 = ((activeTarget2 - activePrice) * positionQty).toFixed(2);
   const lossAtSL = ((activePrice - activeStopLoss) * positionQty).toFixed(2);
 
-  // Filter and sort recommendations strictly in order
+  // Deduplicate, filter and sort recommendations strictly by Confidence Score or selected criteria
   const orderedRecommendations = useMemo(() => {
-    let list = [...recommendations];
+    // 1. Deduplicate by stock ticker symbol
+    let list = deduplicateRecommendations(recommendations);
 
-    // Filter by category
+    // 2. Filter by category
     if (activeCategory !== "All") {
       list = list.filter((item) =>
         item.category.toLowerCase().includes(activeCategory.toLowerCase())
       );
     }
 
-    // Filter by search query
+    // 3. Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -143,8 +185,23 @@ export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
       );
     }
 
-    // Sort in structured sequence
+    // 4. Sort by Confidence Score or selected sort preference
     list.sort((a, b) => {
+      const scoreA = getConfidenceScore(a);
+      const scoreB = getConfidenceScore(b);
+
+      if (sortBy === "confidence_desc") {
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        return b.expectedReturnPct - a.expectedReturnPct;
+      }
+      if (sortBy === "confidence_asc") {
+        if (scoreA !== scoreB) {
+          return scoreA - scoreB;
+        }
+        return a.expectedReturnPct - b.expectedReturnPct;
+      }
       if (sortBy === "return_desc") {
         return b.expectedReturnPct - a.expectedReturnPct;
       }
@@ -163,10 +220,12 @@ export const DailyRecommendations: React.FC<DailyRecommendationsProps> = ({
           HOLD: 1,
           WATCH: 0,
         };
-        return (signalWeight[b.signal] || 0) - (signalWeight[a.signal] || 0);
+        const diff = (signalWeight[b.signal] || 0) - (signalWeight[a.signal] || 0);
+        if (diff !== 0) return diff;
+        return scoreB - scoreA;
       }
-      // Default: Conviction Rank (initial order)
-      return 0;
+      // Default: Confidence Score descending
+      return scoreB - scoreA;
     });
 
     return list;
@@ -476,11 +535,17 @@ Position Size: ${positionQty} units
                   aria-label="Sort recommendations"
                   className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer"
                 >
-                  <option value="rank" className="bg-slate-900 text-slate-200">
-                    Conviction Rank (#1 → #6)
+                  <option value="confidence_desc" className="bg-slate-900 text-slate-200">
+                    Confidence Score (High → Low)
+                  </option>
+                  <option value="confidence_asc" className="bg-slate-900 text-slate-200">
+                    Confidence Score (Low → High)
                   </option>
                   <option value="return_desc" className="bg-slate-900 text-slate-200">
                     Highest Expected Return (%)
+                  </option>
+                  <option value="return_asc" className="bg-slate-900 text-slate-200">
+                    Lowest Expected Return (%)
                   </option>
                   <option value="risk_asc" className="bg-slate-900 text-slate-200">
                     Lowest Risk First
@@ -506,6 +571,7 @@ Position Size: ${positionQty} units
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {orderedRecommendations.map((rec, index) => {
               const isCurrentActive = rec.symbol.toUpperCase() === activeSymbol.toUpperCase();
+              const score = getConfidenceScore(rec);
 
               return (
                 <div
@@ -516,10 +582,16 @@ Position Size: ${positionQty} units
                       : "border-slate-800 hover:border-slate-700"
                   }`}
                 >
-                  {/* Top Bar: Rank Tag & Signal Badge */}
+                  {/* Top Bar: Rank Tag, Confidence Score & Signal Badge */}
                   <div className="flex items-center justify-between gap-2">
                     {getRankBadge(index)}
-                    {getSignalBadge(rec.signal)}
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30 text-[10px] font-mono font-bold flex items-center gap-1 shadow-sm">
+                        <Zap className="w-3 h-3 text-indigo-400" />
+                        {score}% Conf.
+                      </span>
+                      {getSignalBadge(rec.signal)}
+                    </div>
                   </div>
 
                   {/* Stock Symbol, Company Name & Category */}
@@ -848,7 +920,7 @@ Position Size: ${positionQty} units
               </button>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 text-center font-mono">
+            <div className="grid grid-cols-5 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 text-center font-mono">
               <div>
                 <span className="text-[10px] text-slate-500 block uppercase">Current</span>
                 <span className="text-sm font-bold text-slate-200">
@@ -871,6 +943,12 @@ Position Size: ${positionQty} units
                 <span className="text-[10px] text-slate-500 block uppercase">Upside</span>
                 <span className="text-sm font-bold text-emerald-400">
                   +{selectedRecModal.expectedReturnPct}%
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block uppercase">Confidence</span>
+                <span className="text-sm font-bold text-indigo-300">
+                  {getConfidenceScore(selectedRecModal)}%
                 </span>
               </div>
             </div>

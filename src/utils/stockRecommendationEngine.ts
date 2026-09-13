@@ -104,6 +104,17 @@ export function generateStockRecommendation(
     `Favorable Sentiment & Risk/Reward (1:${rrRatio})`,
   ];
 
+  const confidenceScore = Math.min(
+    96,
+    Math.max(
+      65,
+      Math.round(
+        (signal === "STRONG BUY" ? 90 : signal === "BUY" ? 85 : signal === "ACCUMULATE" ? 80 : 72) +
+        (sentimentScore > 0 ? (sentimentScore / 100) * 6 : (sentimentScore / 100) * 8)
+      )
+    )
+  );
+
   return {
     id: `rec_active_${symbol}`,
     symbol,
@@ -113,6 +124,7 @@ export function generateStockRecommendation(
     targetPrice,
     stopLoss,
     expectedReturnPct,
+    confidenceScore,
     signal,
     timeframe: "2-4 Weeks",
     riskLevel,
